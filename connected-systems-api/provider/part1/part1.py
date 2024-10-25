@@ -65,7 +65,7 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
         await self.__create_mandatory_collections()
 
     async def close(self):
-        es = async_connections.get_connection()
+        es = async_connections.get_connection(es_conn_part1)
         await es.close()
 
     async def __create_mandatory_collections(self):

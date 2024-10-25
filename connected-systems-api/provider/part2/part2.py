@@ -91,7 +91,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
 
     async def close(self):
         await self._pool.close()
-        es = async_connections.get_connection()
+        es = async_connections.get_connection(es_conn_part2)
         await es.close()
 
     async def setup(self):

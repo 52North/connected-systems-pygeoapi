@@ -42,7 +42,7 @@ class AppMode(str, Enum):
 
 
 class AppState:
-    mode: AppMode
+    mode: AppMode = AppMode.PROD
     state: State = State.STARTING
     enabled_specs: List
     _version: str

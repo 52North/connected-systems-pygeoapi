@@ -48,7 +48,7 @@ APP.config['JSONIFY_PRETTYPRINT_REGULAR'] = CONFIG['server'].get('pretty_print',
 
 if os.getenv("QUART_AUTH_BASIC", True):
 
-    if not os.getenv("QUART_AUTH_BASIC_USERNAME", None) or os.getenv("QUART_AUTH_BASIC_PASSWORD", None):
+    if (os.getenv("QUART_AUTH_BASIC_USERNAME") is None or os.getenv("QUART_AUTH_BASIC_PASSWORD") is None):
         APP.metrics.state = State.ERROR
         APP.config["QUART_AUTH_BASIC_USERNAME"] = secrets.token_hex()
         APP.config["QUART_AUTH_BASIC_PASSWORD"] = secrets.token_hex()

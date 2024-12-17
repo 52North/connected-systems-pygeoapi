@@ -46,13 +46,6 @@ APP = cors(APP)
 APP.url_map.strict_slashes = False
 APP.config['JSONIFY_PRETTYPRINT_REGULAR'] = CONFIG['server'].get('pretty_print', False)
 
-APP.register_blueprint(csa)
-APP.register_blueprint(edr)
-APP.register_blueprint(stac)
-APP.register_blueprint(oapip)
-APP.register_blueprint(coverage)
-APP.register_blueprint(collections)
-
 if os.getenv("QUART_AUTH_BASIC", True):
 
     if (os.getenv("QUART_AUTH_BASIC_USERNAME") is None or os.getenv("QUART_AUTH_BASIC_PASSWORD") is None):
@@ -76,6 +69,16 @@ if os.getenv("QUART_AUTH_BASIC", True):
     async def is_auth():
         # Auth is handled by @basic_auth_required wrapper already
         return None
+
+
+APP.register_blueprint(csa)
+APP.register_blueprint(edr)
+APP.register_blueprint(stac)
+APP.register_blueprint(oapip)
+APP.register_blueprint(coverage)
+APP.register_blueprint(collections)
+
+
 
 @APP.get('/')
 async def landing_page():

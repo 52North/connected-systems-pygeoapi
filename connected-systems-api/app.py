@@ -49,12 +49,10 @@ APP.config['JSONIFY_PRETTYPRINT_REGULAR'] = CONFIG['server'].get('pretty_print',
 if os.getenv("QUART_AUTH_BASIC", True):
 
     if (os.getenv("QUART_AUTH_BASIC_USERNAME") is None or os.getenv("QUART_AUTH_BASIC_PASSWORD") is None):
-        APP.metrics.state = State.ERROR
         APP.config["QUART_AUTH_BASIC_USERNAME"] = secrets.token_hex()
         APP.config["QUART_AUTH_BASIC_PASSWORD"] = secrets.token_hex()
         LOGGER.critical(f"QUART_AUTH_BASIC is set but no credentials are provided!")
     else:
-        APP.metrics.state = State.STARTING
         APP.config["QUART_AUTH_BASIC_USERNAME"] = os.getenv("QUART_AUTH_BASIC_PASSWORD")
         APP.config["QUART_AUTH_BASIC_PASSWORD"] = os.getenv("QUART_AUTH_BASIC_USERNAME")
 
@@ -72,15 +70,14 @@ if os.getenv("QUART_AUTH_BASIC", True):
         # Auth is handled by @basic_auth_required wrapper already
         return None
 
-if APP.metrics.state == State.STARTING:
-    APP.register_blueprint(csa)
+  APP.register_blueprint(csa)
 
-    # TODO: make this configurable, only import required/configured
-    APP.register_blueprint(edr)
-    APP.register_blueprint(stac)
-    APP.register_blueprint(oapip)
-    APP.register_blueprint(coverage)
-    APP.register_blueprint(collections)
+  # TODO: make this configurable, only import required/configured
+  APP.register_blueprint(edr)
+  APP.register_blueprint(stac)
+  APP.register_blueprint(oapip)
+  APP.register_blueprint(coverage)
+  APP.register_blueprint(collections)
 
 
 @APP.get('/')

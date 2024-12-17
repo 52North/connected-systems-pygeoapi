@@ -84,7 +84,7 @@ class AsyncAPIRequest(APIRequest):
 
     def _get_format(self, headers) -> Union[str, None]:
         if f := super()._get_format(headers):
-            return f
+            return "application/json" if f == "json" else f
         else:
             h = headers.get('accept', headers.get('Accept', '')).strip()  # noqa
             return h if h in ALLOWED_MIMES.values() else None

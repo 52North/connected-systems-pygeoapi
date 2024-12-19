@@ -28,7 +28,7 @@ Installation of requirements:
 
 ```commandline
 pip install -r requirements.txt
-pip install -r --no-deps requirements_nodeps.txt
+pip install --no-deps -r requirements_nodeps.txt
 
 [if toardb backend is used]
 pip install -r requirements_toardb_csa.txt

@@ -53,8 +53,8 @@ if os.getenv("QUART_AUTH_BASIC", True):
         APP.config["QUART_AUTH_BASIC_PASSWORD"] = secrets.token_hex()
         LOGGER.critical(f"QUART_AUTH_BASIC is set but no credentials are provided!")
     else:
-        APP.config["QUART_AUTH_BASIC_USERNAME"] = os.getenv("QUART_AUTH_BASIC_PASSWORD")
-        APP.config["QUART_AUTH_BASIC_PASSWORD"] = os.getenv("QUART_AUTH_BASIC_USERNAME")
+        APP.config["QUART_AUTH_BASIC_USERNAME"] = os.getenv("QUART_AUTH_BASIC_USERNAME")
+        APP.config["QUART_AUTH_BASIC_PASSWORD"] = os.getenv("QUART_AUTH_BASIC_PASSWORD")
 
 
     @csa.before_request

@@ -82,9 +82,10 @@ class CSAPI(CSMeta):
     strict_validation = True
 
     def __init__(self, config: Dict, openapi: Dict):
+        config_prefix = os.getenv("CONFIG_PREFIX", "CSA_")
         # Allow for configuration using environment variables that overwrite values from the provided config
         for key, val in os.environ.items():
-            if key.startswith("CSA_"):
+            if key.startswith(config_prefix):
                 # resolve key to config property
                 # config properties may include underscored encoded as __
                 path = []

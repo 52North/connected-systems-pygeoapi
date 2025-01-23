@@ -252,7 +252,7 @@ class CSAPI(CSMeta):
             case EntityType.OBSERVATIONS:
                 handler = self.provider_part2.query_observations
                 params = ObservationsParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_JSON]
+                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_JSON, ALLOWED_MIMES.F_OMJSON]
 
         if allowed_mimetypes and not request.is_valid(allowed_mimetypes):
             # Check if mime_type is allowed

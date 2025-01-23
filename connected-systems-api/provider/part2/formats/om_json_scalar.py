@@ -65,9 +65,14 @@ class OMJsonSchemaParser(SchemaParser):
 
     def encode(self, obs: asyncpg.Record) -> any:
         # TODO(specki): Check what is officially required here, e.g. are datastream@link or foi@link necessary?
+        
+        # unpack always returns tuple for consistency
+        iterator = iter(struct.unpack("!f", obs["result"]))
+        first = round(next(iterator, None), 3)
+        rest = [round(v, 3) for v in iterator]
         return {
             "id": str(obs["uuid"]),
             "datastream@id": str(obs["datastream_id"]),
             "resultTime": obs["resulttime"],
-            "result": struct.unpack("!f", obs["result"])
+            "result": first if not rest else [first] + rest
         }

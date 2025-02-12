@@ -24,7 +24,7 @@ from quart_cors import cors
 from api import *
 from routes.collections import collections
 from routes.coverages import coverage
-from routes.csa import csa
+from routes.csa import csa_read, csa_readwrite
 from routes.edr import edr
 from routes.processes import oapip
 from routes.stac import stac
@@ -40,26 +40,18 @@ APP.config['QUART_CORS_ALLOW_METHODS'] = os.environ.get("CSA_CORS_ALLOW_METHODS"
 APP.config['QUART_CORS_ALLOW_HEADERS'] = os.environ.get("CSA_CORS_ALLOW_HEADERS")
 APP.config['QUART_CORS_EXPOSE_HEADERS'] = os.environ.get("CSA_CORS_EXPOSE_HEADERS")
 APP.config['QUART_CORS_MAX_AGE'] = os.environ.get("CSA_CORS_MAX_AGE")
-
 APP = cors(APP)
+
+APP.config["QUART_AUTH_BASIC_USERNAME"] = os.environ.get("QUART_AUTH_BASIC_USERNAME") or secrets.token_hex()
+APP.config["QUART_AUTH_BASIC_PASSWORD"] = os.environ.get("QUART_AUTH_BASIC_PASSWORD") or secrets.token_hex()
+APP.config["QUART_AUTH_BASIC_READ"] = os.environ.get("QUART_AUTH_BASIC_READ") or False
+APP.config["QUART_AUTH_BASIC_READWRITE"] = os.environ.get("QUART_AUTH_BASIC_READWRITE") or True
 
 APP.url_map.strict_slashes = False
 APP.config['JSONIFY_PRETTYPRINT_REGULAR'] = CONFIG['server'].get('pretty_print', False)
 
-if os.getenv("QUART_AUTH_BASIC", True):
-
-    if (os.getenv("QUART_AUTH_BASIC_USERNAME") is None or os.getenv("QUART_AUTH_BASIC_PASSWORD") is None):
-        APP.metrics.state = State.ERROR
-        APP.config["QUART_AUTH_BASIC_USERNAME"] = secrets.token_hex()
-        APP.config["QUART_AUTH_BASIC_PASSWORD"] = secrets.token_hex()
-        LOGGER.critical(f"QUART_AUTH_BASIC is set but no credentials are provided!")
-    else:
-        APP.metrics.state = State.STARTING
-        APP.config["QUART_AUTH_BASIC_USERNAME"] = os.getenv("QUART_AUTH_BASIC_PASSWORD")
-        APP.config["QUART_AUTH_BASIC_PASSWORD"] = os.getenv("QUART_AUTH_BASIC_USERNAME")
-
-
-    @csa.before_request
+if APP.config["QUART_AUTH_BASIC_READ"]:
+    @csa_read.before_request
     @basic_auth_required()
     async def is_auth():
         # Auth is handled by @basic_auth_required wrapper already
@@ -72,14 +64,22 @@ if os.getenv("QUART_AUTH_BASIC", True):
         # Auth is handled by @basic_auth_required wrapper already
         return None
 
+if APP.config["QUART_AUTH_BASIC_READWRITE"]:
+    @csa_readwrite.before_request
+    @basic_auth_required()
+    async def is_auth():
+        # Auth is handled by @basic_auth_required wrapper already
+        return None
+
 if APP.metrics.state == State.STARTING:
-    APP.register_blueprint(csa)
+    APP.register_blueprint(csa_read)
+    APP.register_blueprint(csa_readwrite)
 
     # TODO: make this configurable, only import required/configured
-    APP.register_blueprint(edr)
-    APP.register_blueprint(stac)
-    APP.register_blueprint(oapip)
-    APP.register_blueprint(coverage)
+    # APP.register_blueprint(edr)
+    # APP.register_blueprint(stac)
+    # APP.register_blueprint(oapip)
+    # APP.register_blueprint(coverage)
     APP.register_blueprint(collections)
 
 
@@ -89,12 +89,13 @@ async def landing_page():
     return await to_response(await csapi_.landing(request))
 
 
+@basic_auth_required()
 @APP.get('/metrics')
 async def metrics():
     headers = {"Content-Type": "text/plain"}
     return await make_response(str(APP.metrics), headers)
 
-
+@basic_auth_required()
 @APP.get('/status')
 async def status():
     match APP.metrics.state.value:
@@ -156,15 +157,6 @@ async def close_db():
 if __name__ == "__main__":
     for _ in range(5):
         LOGGER.critical("!!! RUNNING IN DEBUG MODE !!! ")
-
-    if not os.getenv("QUART_AUTH_BASIC_USERNAME"):
-        name = secrets.token_hex()
-        APP.config["QUART_AUTH_BASIC_USERNAME"] = name
-        LOGGER.critical(f"QUART_AUTH_BASIC is set but no credentials are provided! generating username: {name}")
-    if not os.getenv("QUART_AUTH_BASIC_PASSWORD"):
-        pwd = secrets.token_hex()
-        APP.config["QUART_AUTH_BASIC_PASSWORD"] = pwd
-        LOGGER.critical(f"QUART_AUTH_BASIC is set but no credentials are provided! generating password: {pwd}")
 
     """ Initialize peristent database/provider connections """
     APP.metrics.mode = AppMode.DEV

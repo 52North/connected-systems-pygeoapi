@@ -71,16 +71,15 @@ if APP.config["QUART_AUTH_BASIC_READWRITE"]:
         # Auth is handled by @basic_auth_required wrapper already
         return None
 
-if APP.metrics.state == State.STARTING:
-    APP.register_blueprint(csa_read)
-    APP.register_blueprint(csa_readwrite)
+APP.register_blueprint(csa_read)
+APP.register_blueprint(csa_readwrite)
 
-    # TODO: make this configurable, only import required/configured
-    # APP.register_blueprint(edr)
-    # APP.register_blueprint(stac)
-    # APP.register_blueprint(oapip)
-    # APP.register_blueprint(coverage)
-    APP.register_blueprint(collections)
+# TODO: make this configurable, only import required/configured
+# APP.register_blueprint(edr)
+# APP.register_blueprint(stac)
+# APP.register_blueprint(oapip)
+# APP.register_blueprint(coverage)
+APP.register_blueprint(collections)
 
 
 @APP.get('/')

@@ -170,28 +170,24 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
 
             # create in timescaledb
             # TODO: resolve to different parsers based on something?
-            return await self._create_observation([self.parser.decode(item)])
+            return await self._create_observation(self.parser.decode(item))
         else:
             raise ProviderGenericError(f"unrecognized type: {type}")
 
-    async def _create_observation(self, observations: List[Observation]) -> List[str]:
-        res = [""] * len(observations)
+    async def _create_observation(self, obs: Observation) -> str:
         connection: Connection
         async with self._pool.acquire() as connection:
-            # reformat to tuple
-            for idx, obs in enumerate(observations):
-                # TODO: use prepared statement
-                res[idx] = str(await connection.fetchval(
-                    "INSERT INTO observations (resulttime, phenomenontime, datastream_id, result, sampling_feature_id, procedure_link, parameters) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING uuid;",
-                    obs.resultTime,
-                    obs.phenomenonTime,
-                    obs.datastream_id,
-                    obs.result,
-                    obs.sampling_feature_id,
-                    obs.procedure_link,
-                    obs.parameters
-                ))
-        return res
+            # TODO: use prepared statement
+            return str(await connection.fetchval(
+                "INSERT INTO observations (resulttime, phenomenontime, datastream_id, result, sampling_feature_id, procedure_link, parameters) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING uuid;",
+                obs.resultTime,
+                obs.phenomenonTime,
+                obs.datastream_id,
+                obs.result,
+                obs.sampling_feature_id,
+                obs.procedure_link,
+                obs.parameters
+            ))
 
     async def replace(self, type: EntityType, identifier: str, item: Dict):
         # /req/create-replace-delete/datastream-update-schema

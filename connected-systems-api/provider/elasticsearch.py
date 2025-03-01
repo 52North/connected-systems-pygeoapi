@@ -125,6 +125,10 @@ class ElasticsearchConnector:
         # Select appropriate strategy here: For collections >10k elements search_after must be used
         if excludes is None:
             excludes = []
+
+        # Adding Sorting Here
+        query = query.sort("-resultTime")  
+        
         LOGGER.debug(json.dumps(query.to_dict(), indent=True, default=str))
 
         found = (await query.source(excludes=excludes)[parameters.offset:parameters.offset + parameters.limit]

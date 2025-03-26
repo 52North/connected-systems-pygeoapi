@@ -20,7 +20,7 @@ from http import HTTPMethod
 import jsonschema
 import orjson
 from jsonschema.protocols import Validator
-from jsonschema.validators import Draft7Validator
+from jsonschema.validators import Draft202012Validator
 from pygeoapi.api import *
 from pygeoapi.config import get_config
 from pygeoapi.openapi import load_openapi_document
@@ -46,15 +46,15 @@ class SchemaValidator:
 
     def __init__(self):
         package_dir = pathlib.Path(__file__).parent
-        for prop, loc in [("system_validator", "schemas/connected-systems/system.schema"),
-                          ("procedure_validator", "schemas/connected-systems/procedure.schema"),
-                          ("property_validator", "schemas/connected-systems/property.schema"),
-                          ("feature_validator", "schemas/connected-systems/samplingFeature.schema"),
-                          ("deployment_validator", "schemas/connected-systems/deployment.schema"),
-                          ("datastream_validator", "schemas/connected-systems/datastream.schema"),
-                          ("observation_validator", "schemas/connected-systems/observation.schema")]:
+        for prop, loc in [("system_validator", "schemas/system.schema"),
+                          ("procedure_validator", "schemas/procedure.schema"),
+                          ("property_validator", "schemas/property.schema"),
+                          ("feature_validator", "schemas/samplingFeature.schema"),
+                          ("deployment_validator", "schemas/deployment.schema"),
+                          ("datastream_validator", "schemas/datastream.schema"),
+                          ("observation_validator", "schemas/observation.schema")]:
             with open(os.path.join(package_dir, loc), 'r') as definition:
-                setattr(self, prop, Draft7Validator(json.load(definition)))
+                setattr(self, prop, Draft202012Validator(json.load(definition)))
 
     def validate(self, collection: EntityType, instance: any) -> None:
         match collection:

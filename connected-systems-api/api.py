@@ -219,43 +219,53 @@ class CSAPI(CSMeta):
         :returns: tuple of headers, status code, content
         """
 
+        allowed_mimetypes = []
+        default_mimetype: ALLOWED_MIMES = None
         match collection:
             case EntityType.SYSTEMS:
                 handler = self.provider_part1.query_systems
                 params = SystemsParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON, ALLOWED_MIMES.F_GEOJSON]
+                default_mimetype = ALLOWED_MIMES.F_GEOJSON
             case EntityType.DEPLOYMENTS:
                 handler = self.provider_part1.query_deployments
                 params = DeploymentsParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON, ALLOWED_MIMES.F_GEOJSON]
+                default_mimetype = ALLOWED_MIMES.F_GEOJSON
             case EntityType.PROCEDURES:
                 handler = self.provider_part1.query_procedures
                 params = ProceduresParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON, ALLOWED_MIMES.F_GEOJSON]
+                default_mimetype = ALLOWED_MIMES.F_GEOJSON
             case EntityType.SAMPLING_FEATURES:
                 handler = self.provider_part1.query_sampling_features
                 params = SamplingFeaturesParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_GEOJSON]
+                default_mimetype = ALLOWED_MIMES.F_GEOJSON
             case EntityType.PROPERTIES:
                 handler = self.provider_part1.query_properties
                 params = CSAParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON]
+                default_mimetype = ALLOWED_MIMES.F_SMLJSON
             case EntityType.DATASTREAMS:
                 handler = self.provider_part2.query_datastreams
                 params = DatastreamsParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_JSON]
+                default_mimetype = ALLOWED_MIMES.F_JSON
             case EntityType.DATASTREAMS_SCHEMA:
                 handler = self.provider_part2.query_datastreams
                 params = DatastreamsParams()
                 params.schema = True
                 allowed_mimetypes = [ALLOWED_MIMES.F_JSON]
+                default_mimetype = ALLOWED_MIMES.F_JSON
             case EntityType.OBSERVATIONS:
                 handler = self.provider_part2.query_observations
                 params = ObservationsParams()
                 allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_JSON, ALLOWED_MIMES.F_OMJSON]
+                default_mimetype = ALLOWED_MIMES.F_JSON
 
-        if allowed_mimetypes and not request.is_valid(allowed_mimetypes):
-            # Check if mime_type is allowed
+        # Check if mime_type is allowed
+        if not request.is_valid(allowed_mimetypes):
             return self.get_exception(
                 HTTPStatus.BAD_REQUEST,
                 {},
@@ -263,7 +273,7 @@ class CSAPI(CSMeta):
                 'InvalidMimetype',
                 f"invalid mimetype supplied! expected {[f.value for f in allowed_mimetypes]} got '{request.format}'")
 
-        headers = request.get_response_headers(**self.api_headers, force_type=request.format)
+        headers = request.get_response_headers(**self.api_headers, default_type=default_mimetype.value, force_type=request.format)
         collection = True
         # Expand parameters with additional information based on path
         if path is not None:

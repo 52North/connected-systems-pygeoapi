@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 from typing import Self, Union, Tuple, Optional, List
 
 from pygeoapi import l10n
@@ -78,6 +77,8 @@ class AsyncAPIRequest(APIRequest):
         return api_req
 
     def is_valid(self, allowed_formats: Optional[list[str]] = None) -> bool:
+        if not self._format:
+            return True
         if self._format in (f.value.lower() for f in (allowed_formats or ())):
             return True
         return False
@@ -90,11 +91,12 @@ class AsyncAPIRequest(APIRequest):
             return h if h in ALLOWED_MIMES.values() else None
 
     def get_response_headers(self, force_lang: l10n.Locale = None,
+                             default_type: str = None,
                              force_type: str = None,
                              force_encoding: str = None,
                              **custom_headers) -> dict:
         return {
-            'Content-Type': force_encoding if force_encoding else self._format,
+            'Content-Type': force_encoding if force_encoding else self._format if self._format else default_type,
             # 'X-Powered-By': f'pygeoapi {__version__}',
         }
 

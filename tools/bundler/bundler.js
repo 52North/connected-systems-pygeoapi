@@ -60,7 +60,6 @@ function parse_directory(name) {
                         replacement = "https://connected-systems.n52/api/part1/openapi/schemas/common/links.json"
                     } else {
                         replacement = baseUrl + "common/" + ref.substring(33, 34).toLowerCase() + ref.substring(34) + ".json"
-                        console.log(`CASE 1: ${ref} ${replacement}`)
                     }
                 } else if (ref.startsWith("../common/sweCommonDefs.json#/$defs/")) {
                     if (ref.includes("AnyComponent")) {
@@ -69,10 +68,8 @@ function parse_directory(name) {
                         replacement = baseUrl + "swecommon/schemas/json/encodings.json"
                     } else if (ref.includes("Encoding")) {
                         replacement = baseUrl + "swecommon/schemas/json/encodings.json#/$defs/" + ref.substring(36)
-                        console.log(`CASE 2: ${ref} ${replacement}`)
                     } else {
                         replacement = baseUrl + "swecommon/schemas/json/" + ref.substring(36) + ".json"
-                        console.log(`CASE 3: ${ref} ${replacement}`)
                     }
                 } else if (ref.startsWith(".")) {
                     // higher level
@@ -93,7 +90,7 @@ function parse_directory(name) {
                     // Import by name
                     replacement = baseUrl + name + "/" + ref
                 }
-                console.log(`${match[0]}${replacement}`)
+                // console.log(`${match[0]}${replacement}`)
                 schemaText = schemaText.replace(match[0], `$ref":"${replacement}"`)
 
             }
@@ -109,22 +106,34 @@ function parse_directory(name) {
 
             var cleaned = suite;
 
-            /*
+            if ('required' in suite) {
+                if ('oneOf' in suite || 'allOf' in suite || 'anyOf' in suite) {
+                    //console.log("This may lead to problems!!")
+                    //console.log(suite)
+                }
+            }
+
             if ('oneOf' in suite) {
                 cleaned = suite
                 cleaned["oneOf"] = suite["oneOf"].map(schema => {
                     return remove_readonly_required(schema)
                 })
             } else if ('anyOf' in suite){
-                console.log("errr")
+                cleaned["anyOf"] = suite["anyOf"].map(schema => {
+                    return remove_readonly_required(schema)
+                })
             } else if ('allOf' in suite){
-                console.log("errr")
-            } else if ('properties' in suite){
+                cleaned["allOf"] = suite["allOf"].map(schema => {
+                    return remove_readonly_required(schema)
+                })
+            }
+            if ('properties' in suite){
+                console.log("cleaning: " + suite["$id"])
                 cleaned = remove_readonly_required(suite)
             } else {
+                console.log("skipping: " + suite["$id"])
                 cleaned = suite
             }
-            */
 
             registerSchema(cleaned)
         });
@@ -134,25 +143,25 @@ function remove_readonly_required(definition) {
     // Delete readonly properties as they are not valid for Request Validation
     var properties = definition["properties"]
 
-    if (properties) {
+    if (properties && definition["required"]) {
 
-        var not_readonly = Object.entries(properties).filter((key) => {
-            return !('readonly' in key)
+        var not_readonly = Object.entries(properties)
+        .filter((key) => {
+            return !('readOnly' in key[1])
+        }).map((entry) => {
+            return entry[0];
         })
 
         var required;
         if (definition["required"]) {
-            required = definition["required"].map(req => {
-                if (not_readonly.includes(req)) {
-                    return req;
-                }
+            required = definition["required"].filter(req => {
+                return not_readonly.includes(req);
             })
         }
 
-        definition["properties"] = not_readonly
+        // definition["properties"] = (Object.fromEntries(not_readonly.map((t) => [t[0], t[1]])))
         definition["required"] = required
     }
-
     return definition
 }
 

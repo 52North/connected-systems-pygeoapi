@@ -23,11 +23,7 @@ from quart_cors import cors
 
 from api import *
 from routes.collections import collections
-from routes.coverages import coverage
 from routes.csa import csa_read, csa_readwrite
-from routes.edr import edr
-from routes.processes import oapip
-from routes.stac import stac
 
 APP = CustomQuart(__name__,
                   static_folder=static.__path__._path[0],
@@ -94,6 +90,7 @@ async def metrics():
     headers = {"Content-Type": "text/plain"}
     return await make_response(str(APP.metrics), headers)
 
+
 @basic_auth_required()
 @APP.get('/status')
 async def status():
@@ -156,6 +153,9 @@ async def close_db():
 if __name__ == "__main__":
     for _ in range(5):
         LOGGER.critical("!!! RUNNING IN DEBUG MODE !!! ")
+        APP.config["QUART_AUTH_BASIC_USERNAME"] = "test"
+        APP.config["QUART_AUTH_BASIC_PASSWORD"] = "test"
+        print(APP.config)
 
     """ Initialize peristent database/provider connections """
     APP.metrics.mode = AppMode.DEV

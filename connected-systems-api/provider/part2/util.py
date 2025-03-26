@@ -76,6 +76,8 @@ class ObservationQuery:
     def with_limit(self, limit: int) -> Self:
         if limit < 100_000:
             self.limit = limit
+        else:
+            self.limit = 100_000
         return self
 
     def with_offset(self, offset: int) -> Self:

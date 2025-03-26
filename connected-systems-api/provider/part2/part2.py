@@ -1,5 +1,4 @@
 import json
-import json
 import logging
 import uuid
 from http import HTTPStatus
@@ -13,9 +12,9 @@ from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundErr
 
 from .formats.om_json_scalar import OMJsonSchemaParser
 from .util import TimescaleDbConfig, ObservationQuery, Observation
+from ..definitions import *
 from ..elasticsearch import ElasticsearchConnector, ElasticSearchConfig, parse_csa_params, \
     parse_temporal_filters
-from ..definitions import *
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel('INFO')
@@ -25,22 +24,19 @@ class Cache:
     """
     Small cache using circular buffer used for caching whether datastreams exist.
     """
-    __cache = [None] * 128
+    __cache: [str] = [""] * 128
     __pointer: int = 0
 
     async def exists(self, identifier: str) -> bool:
         if identifier in self.__cache:
             # Identifier is in cache
-            print("cache hit")
             return True
         elif await Datastream.exists(id=identifier):
-            print("updating cache")
             # Request and update cache if matching
             self.__cache[self.__pointer] = identifier
             self.__pointer = (self.__pointer + 1) % 128
             return True
         else:
-            print("negative miss")
             return False
 
     def remove(self, identifier: str):
@@ -308,7 +304,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
         response = await self._get_observations(parameters)
         if len(response) > 0:
             links = []
-            if len(response) == int(parameters.limit):
+            if len(response) == int(parameters.limit) or len(response) == 100_000:
                 # page is fully filled - we assume a nextpage exists
                 url = self.base_url
                 if parameters.datastream:

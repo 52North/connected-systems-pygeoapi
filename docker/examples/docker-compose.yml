@@ -14,8 +14,17 @@ networks:
 
 
 services:
+  proxy:
+    image: nginx:alpine
+    ports:
+      - 80:80
+    volumes:
+      - "./nginx-proxy.conf:/etc/nginx/conf.d/default.conf"
+    depends_on:
+      - connected-systems-api
+
   connected-systems-api:
-    image: docker.52north.org/sensor-web/cs-api:latest
+    image: 52north/connected-systems-pygeoapi:v0.4-test
     build:
       context: ../../../
     environment:
@@ -51,7 +60,7 @@ services:
   timescaledb:
     image: timescale/timescaledb-ha:pg16
     ports:
-      - 5432:5432
+      - 5433:5432
     environment:
       TIMESCALEDB_TELEMETRY: off
       POSTGRES_DB: csa

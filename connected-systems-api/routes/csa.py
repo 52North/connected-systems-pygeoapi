@@ -29,6 +29,15 @@ async def systems_path(path=None):
     return await _default_handler(path, EntityType.SYSTEMS)
 
 
+@csa_read.route('/procedures', methods=['GET'])
+@csa_read.route('/procedures/<path:path>', methods=['GET'])
+@csa_readwrite.route('/procedures', methods=['GET', 'POST'])
+@csa_readwrite.route('/procedures/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+async def procedures_path(path=None):
+    request.collection = "procedures"
+    return await _default_handler(path, EntityType.PROCEDURES)
+
+
 @csa_read.route('/systems/<path:path>/subsystems', methods=['GET'])
 @csa_read.route('/systems/<path:path>/deployments', methods=['GET'])
 @csa_read.route('/systems/<path:path>/samplingFeatures', methods=['GET'])
@@ -60,16 +69,9 @@ async def systems_subpath(path=None):
                 return await to_response(await csapi_.post(request, EntityType.DATASTREAMS, ("system", path)))
 
 
-@csa_read.route('/procedures', methods=['GET'])
-@csa_read.route('/procedures/<path:path>', methods=['GET'])
-@csa_readwrite.route('/procedures', methods=['GET', 'POST'])
-@csa_readwrite.route('/procedures/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
-async def procedures_path(path=None):
-    request.collection = "procedures"
-    return await _default_handler(path, EntityType.PROCEDURES)
-
-
 @csa_read.route('/deployments', methods=['GET'])
+@csa_read.route('/deployments/<path:path>', methods=['GET'])
+@csa_readwrite.route('/deployments', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 @csa_readwrite.route('/deployments/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 async def deployments_path(path=None):
     request.collection = "deployments"
@@ -77,6 +79,8 @@ async def deployments_path(path=None):
 
 
 @csa_read.route('/samplingFeatures', methods=['GET'])
+@csa_read.route('/samplingFeatures/<path:path>', methods=['GET'])
+@csa_readwrite.route('/samplingFeatures', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 @csa_readwrite.route('/samplingFeatures/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 async def properties_path(path=None):
     request.collection = "samplingFeatures"
@@ -84,6 +88,8 @@ async def properties_path(path=None):
 
 
 @csa_read.route('/properties', methods=['GET'])
+@csa_read.route('/properties/<path:path>', methods=['GET'])
+@csa_readwrite.route('/properties', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 @csa_readwrite.route('/properties/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 async def properties_subpath(path=None):
     request.collection = "properties"
@@ -91,6 +97,8 @@ async def properties_subpath(path=None):
 
 
 @csa_read.route('/datastreams', methods=['GET'])
+@csa_read.route('/datastreams/<path:path>', methods=['GET'])
+@csa_readwrite.route('/datastreams', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 @csa_readwrite.route('/datastreams/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 async def datastreams_path(path=None):
     request.collection = "datastreams"

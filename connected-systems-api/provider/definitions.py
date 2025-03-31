@@ -16,12 +16,14 @@
 import dataclasses
 import urllib.parse
 from dataclasses import dataclass
+from datetime import datetime as DateTime
 from enum import Enum, auto
 from typing import List, Optional, Dict, Tuple, TypeAlias
-from datetime import datetime as DateTime
 
-from elasticsearch_dsl import AsyncDocument, Keyword, GeoShape, DateRange, InnerDoc
+from elasticsearch_dsl import AsyncDocument, Keyword, GeoShape, Date, DateRange, InnerDoc, Object, GeoPoint, Text, Field
 from pygeoapi.provider.base import ProviderInvalidQueryError
+
+from util import MimeType
 
 TimeInterval: TypeAlias = Tuple[Optional[DateTime], Optional[DateTime]]
 CSAGetResponse: TypeAlias = Tuple[List[Dict], List[Dict]] | None
@@ -37,6 +39,21 @@ class EntityType(Enum):
     DATASTREAMS = auto()
     DATASTREAMS_SCHEMA = auto()
     OBSERVATIONS = auto()
+
+
+class Alias(Field):
+    """Alias field.
+    https://www.elastic.co/guide/en/elasticsearch/reference/master/alias.html
+    """
+
+    name = "alias"
+    _coerce = True
+
+    def to_dict(self):
+        """Return as dict."""
+        d = super(Alias, self).to_dict()
+        d["type"] = "alias"
+        return d
 
 
 @dataclass
@@ -198,25 +215,62 @@ class Characteristics(InnerDoc):
     characteristics = CharacteristicsProp()
 
 
-class System(AsyncDocument):
+class SystemSML(AsyncDocument):
+    type: str = Keyword()
     id: str = Keyword()
+    description = Text()
+    uniqueId = Keyword()
+    label = Text()
+    lang = Text()
+    keywords = Text()
     position = GeoShape()
-    validTime_parsed = DateRange()  # Internal field
+    geometry = Alias(path="position")
     parent = Keyword()
     procedure = Keyword()
     poi = Keyword()
     observedProperty = Keyword()
     controlledProperty = Keyword()
-    uniqueId = Keyword()
     characteristics = Characteristics()
 
+    validTime_parsed = DateRange()  # Internal field
+
     class Index:
-        name = "systems"
+        name = "systems_sml"
         using = es_conn_part1
+        aliases = {
+            "systems": {}
+        }
+
+
+class SystemGeoJsonProperties(InnerDoc):
+    featureType = Keyword()
+    uid = Keyword()
+    name = Text()
+    description = Text()
+    assetType = Keyword()
+    validTime = Date()
+
+
+class SystemGeoJson(AsyncDocument):
+    type = Keyword()
+    id = Keyword()
+    geometry = GeoShape()
+    bbox = GeoPoint()
+    links = Object()
+    properties = SystemGeoJsonProperties()
+    validTime_parsed = DateRange()  # Internal field
+
+    class Index:
+        name = "systems_geojson"
+        using = es_conn_part1
+        aliases = {
+            "systems": {}
+        }
 
 
 class Deployment(AsyncDocument):
     id: str = Keyword()
+    uniqueId = Keyword()
     system_ids = Keyword()  # Internal field
 
     class Index:
@@ -268,7 +322,7 @@ class ConnectedSystemsProvider:
         """Returns the list of conformance classes that are implemented by this provider"""
         return []
 
-    async def create(self, type: EntityType, item: Dict) -> CSACrudResponse:
+    async def create(self, type: EntityType, encoding: MimeType, item: Dict) -> CSACrudResponse:
         """
         Create a new item
 

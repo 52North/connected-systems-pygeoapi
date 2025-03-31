@@ -71,12 +71,11 @@ async def systems_subpath(path=None):
 
 @csa_read.route('/deployments', methods=['GET'])
 @csa_read.route('/deployments/<path:path>', methods=['GET'])
-@csa_readwrite.route('/deployments', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/deployments', methods=['GET', 'POST'])
 @csa_readwrite.route('/deployments/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
 async def deployments_path(path=None):
     request.collection = "deployments"
     return await _default_handler(path, EntityType.DEPLOYMENTS)
-
 
 @csa_read.route('/samplingFeatures', methods=['GET'])
 @csa_read.route('/samplingFeatures/<path:path>', methods=['GET'])

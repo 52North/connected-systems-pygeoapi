@@ -10,7 +10,7 @@ APIResponse = Tuple[dict | None, int, str]
 Path = Union[Tuple[str, str], None]
 
 
-class ALLOWED_MIMES(Enum):
+class MimeType(Enum):
     F_HTML = "html"
     F_JSON = "application/json"
     F_GEOJSON = "application/geo+json"
@@ -88,7 +88,7 @@ class AsyncAPIRequest(APIRequest):
             return "application/json" if f == "json" else f
         else:
             h = headers.get('accept', headers.get('Accept', '')).strip()  # noqa
-            return h if h in ALLOWED_MIMES.values() else None
+            return h if h in MimeType.values() else None
 
     def get_response_headers(self, force_lang: l10n.Locale = None,
                              default_type: str = None,

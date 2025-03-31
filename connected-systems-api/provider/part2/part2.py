@@ -129,7 +129,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
         LOGGER.error("TODO: define conformance classes")
         return []
 
-    async def create(self, type: EntityType, item: Dict) -> CSACrudResponse:
+    async def create(self, type: EntityType, encoding: MimeType, item: Dict) -> CSACrudResponse:
         """
         Create a new item
 

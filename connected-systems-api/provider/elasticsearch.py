@@ -1,5 +1,3 @@
-import copy
-import json
 import json
 import logging
 from dataclasses import field
@@ -149,22 +147,3 @@ class ElasticsearchConnector:
                 raise ProviderItemNotFoundError()
             else:
                 return [], []
-
-    # Creating multiple entities with one request is apparently not part of the spec anymore
-    # async def create_many(self, index: str, items: List[Tuple[str, Dict]]) -> CSACrudResponse:
-    #     routines = [None] * len(items)
-    #
-    #     for i, elem in enumerate(items):
-    #         identifier, item = elem
-    #         # add to ES if not already present
-    #         exists = await self._es.exists(index=index, id=identifier)
-    #         if exists.body:
-    #             raise ProviderInvalidDataError(user_msg='record already exists')
-    #         else:
-    #             routines[i] = self._es.index(index=index, id=identifier, document=item)
-    #
-    #     # wait for completion
-    #     await asyncio.gather(*routines)
-    #
-    #     # TODO: check if we need to validate something here
-    #     return [item[0] for item in items]

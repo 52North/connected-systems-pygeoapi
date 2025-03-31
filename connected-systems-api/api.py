@@ -19,6 +19,7 @@ from http import HTTPMethod
 
 import jsonschema
 import orjson
+from jsonschema.exceptions import ValidationError
 from jsonschema.protocols import Validator
 from jsonschema.validators import Draft202012Validator
 from pygeoapi.api import *
@@ -36,9 +37,12 @@ LOGGER.setLevel('DEBUG')
 
 
 class SchemaValidator:
-    system_validator: Validator
-    deployment_validator: Validator
-    procedure_validator: Validator
+    system_sml_validator: Validator
+    system_geojson_validator: Validator
+    deployment_sml_validator: Validator
+    deployment_geojson_validator: Validator
+    procedure_sml_validator: Validator
+    procedure_geojson_validator: Validator
     feature_validator: Validator
     property_validator: Validator
     datastream_validator: Validator
@@ -46,32 +50,46 @@ class SchemaValidator:
 
     def __init__(self):
         package_dir = pathlib.Path(__file__).parent
-        for prop, loc in [("system_validator", "schemas/system.schema"),
-                          ("procedure_validator", "schemas/procedure.schema"),
+        for prop, loc in [("system_sml_validator", "schemas/system.sml.schema"),
+                          ("system_geojson_validator", "schemas/system.geojson.schema"),
+                          ("procedure_sml_validator", "schemas/procedure.sml.schema"),
+                          ("procedure_geojson_validator", "schemas/procedure.geojson.schema"),
                           ("property_validator", "schemas/property.schema"),
                           ("feature_validator", "schemas/samplingFeature.schema"),
-                          ("deployment_validator", "schemas/deployment.schema"),
+                          ("deployment_sml_validator", "schemas/deployment.sml.schema"),
+                          ("deployment_geojson_validator", "schemas/deployment.geojson.schema"),
                           ("datastream_validator", "schemas/datastream.schema"),
                           ("observation_validator", "schemas/observation.schema")]:
             with open(os.path.join(package_dir, loc), 'r') as definition:
                 setattr(self, prop, Draft202012Validator(json.load(definition)))
 
-    def validate(self, collection: EntityType, instance: any) -> None:
-        match collection:
-            case EntityType.SYSTEMS:
-                return self.system_validator.validate(instance)
-            case EntityType.DEPLOYMENTS:
-                return self.deployment_validator.validate(instance)
-            case EntityType.PROCEDURES:
-                return self.procedure_validator.validate(instance)
-            case EntityType.SAMPLING_FEATURES:
-                return self.feature_validator.validate(instance)
-            case EntityType.PROPERTIES:
-                return self.property_validator.validate(instance)
-            case EntityType.DATASTREAMS:
-                return self.datastream_validator.validate(instance)
-            case EntityType.OBSERVATIONS:
-                return self.observation_validator.validate(instance)
+    def validate(self, collection: EntityType, encoding: str, instance: any) -> None:
+        validator: Validator = None
+        match (collection, encoding):
+            case (EntityType.SYSTEMS, MimeType.F_SMLJSON.value):
+                validator = self.system_sml_validator
+            case (EntityType.SYSTEMS, MimeType.F_GEOJSON.value):
+                validator = self.system_geojson_validator
+            case (EntityType.DEPLOYMENTS, MimeType.F_SMLJSON.value):
+                validator = self.deployment_sml_validator
+            case (EntityType.DEPLOYMENTS, MimeType.F_GEOJSON.value):
+                validator = self.deployment_geojson_validator
+            case (EntityType.PROCEDURES, MimeType.F_SMLJSON.value):
+                validator = self.procedure_sml_validator
+            case (EntityType.PROCEDURES, MimeType.F_GEOJSON.value):
+                validator = self.procedure_geojson_validator
+            case (EntityType.SAMPLING_FEATURES, MimeType.F_GEOJSON.value):
+                validator = self.feature_validator
+            case (EntityType.PROPERTIES, MimeType.F_SMLJSON.value):
+                validator = self.property_validator
+            case (EntityType.DATASTREAMS, MimeType.F_JSON.value):
+                validator = self.datastream_validator
+            case (EntityType.OBSERVATIONS, MimeType.F_JSON.value):
+                validator = self.observation_validator
+            case _:
+                raise ValidationError(f"invalid encoding '{encoding}' for EntityType: '{collection.name}'. Please specify an encoding!")
+
+        return validator.validate(instance)
 
 
 class CSAPI(CSMeta):
@@ -220,49 +238,49 @@ class CSAPI(CSMeta):
         """
 
         allowed_mimetypes = []
-        default_mimetype: ALLOWED_MIMES = None
+        default_mimetype: MimeType = None
         match collection:
             case EntityType.SYSTEMS:
                 handler = self.provider_part1.query_systems
                 params = SystemsParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON, ALLOWED_MIMES.F_GEOJSON]
-                default_mimetype = ALLOWED_MIMES.F_GEOJSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]
+                default_mimetype = MimeType.F_GEOJSON
             case EntityType.DEPLOYMENTS:
                 handler = self.provider_part1.query_deployments
                 params = DeploymentsParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON, ALLOWED_MIMES.F_GEOJSON]
-                default_mimetype = ALLOWED_MIMES.F_GEOJSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]
+                default_mimetype = MimeType.F_GEOJSON
             case EntityType.PROCEDURES:
                 handler = self.provider_part1.query_procedures
                 params = ProceduresParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON, ALLOWED_MIMES.F_GEOJSON]
-                default_mimetype = ALLOWED_MIMES.F_GEOJSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]
+                default_mimetype = MimeType.F_GEOJSON
             case EntityType.SAMPLING_FEATURES:
                 handler = self.provider_part1.query_sampling_features
                 params = SamplingFeaturesParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_GEOJSON]
-                default_mimetype = ALLOWED_MIMES.F_GEOJSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_GEOJSON]
+                default_mimetype = MimeType.F_GEOJSON
             case EntityType.PROPERTIES:
                 handler = self.provider_part1.query_properties
                 params = CSAParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_SMLJSON]
-                default_mimetype = ALLOWED_MIMES.F_SMLJSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON]
+                default_mimetype = MimeType.F_SMLJSON
             case EntityType.DATASTREAMS:
                 handler = self.provider_part2.query_datastreams
                 params = DatastreamsParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_JSON]
-                default_mimetype = ALLOWED_MIMES.F_JSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_JSON]
+                default_mimetype = MimeType.F_JSON
             case EntityType.DATASTREAMS_SCHEMA:
                 handler = self.provider_part2.query_datastreams
                 params = DatastreamsParams()
                 params.schema = True
-                allowed_mimetypes = [ALLOWED_MIMES.F_JSON]
-                default_mimetype = ALLOWED_MIMES.F_JSON
+                allowed_mimetypes = [MimeType.F_JSON]
+                default_mimetype = MimeType.F_JSON
             case EntityType.OBSERVATIONS:
                 handler = self.provider_part2.query_observations
                 params = ObservationsParams()
-                allowed_mimetypes = [ALLOWED_MIMES.F_HTML, ALLOWED_MIMES.F_JSON, ALLOWED_MIMES.F_OMJSON]
-                default_mimetype = ALLOWED_MIMES.F_JSON
+                allowed_mimetypes = [MimeType.F_HTML, MimeType.F_JSON, MimeType.F_OMJSON]
+                default_mimetype = MimeType.F_JSON
 
         # Check if mime_type is allowed
         if not request.is_valid(allowed_mimetypes):
@@ -293,7 +311,7 @@ class CSAPI(CSMeta):
             if path[0] == "id":
                 collection = False
 
-        if request.format == ALLOWED_MIMES.F_HTML.value:
+        if request.format == MimeType.F_HTML.value:
             return self._format_html_response(request, headers, collection)
 
         try:
@@ -390,9 +408,10 @@ class CSAPI(CSMeta):
         # Validate against json schema if possible+required
         # must be turned off when PATCHing
         # may be turned off for increased performance
+        encoding = request.headers.get("Content-Type")
         if shall_validate:
             try:
-                self.validator.validate(collection, entity)
+                self.validator.validate(collection, encoding, entity)
             except jsonschema.exceptions.ValidationError as ex:
                 return self.get_exception(
                     HTTPStatus.BAD_REQUEST,
@@ -419,7 +438,7 @@ class CSAPI(CSMeta):
             # passthru to provider
             match method:
                 case HTTPMethod.POST:
-                    response = provider.create(collection, entity)
+                    response = provider.create(collection, encoding, entity)
                 case HTTPMethod.PUT:
                     response = provider.replace(collection, path[1], entity)
                 case HTTPMethod.PATCH:
@@ -495,7 +514,7 @@ class CSAPI(CSMeta):
         if data is None:
             return headers, HTTPStatus.NOT_FOUND, ""
         match request.format:
-            case ALLOWED_MIMES.F_GEOJSON.value:
+            case MimeType.F_GEOJSON.value:
                 response = {
                     "type": "FeatureCollection",
                     "features": [item for item in data[0]],

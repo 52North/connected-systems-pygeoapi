@@ -13,19 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =================================================================
+import asyncio
 import logging
 import uuid
-from datetime import datetime as DateTime
-from pprint import pprint, pformat
-from typing import Callable, Awaitable, Coroutine
+from typing import Callable, Awaitable
 
 import elasticsearch
-from elasticsearch_dsl import async_connections
+from elasticsearch_dsl import async_connections, AsyncSearch
 from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundError
 
+from ..definitions import *
 from ..elasticsearch import ElasticsearchConnector, ElasticSearchConfig, parse_csa_params, parse_spatial_params, \
     parse_datetime_params
-from ..definitions import *
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(level='INFO')
@@ -35,6 +34,7 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
 
     def __init__(self, provider_def: Dict):
         super().__init__(provider_def)
+        self.base_url = provider_def["base_url"]
         self._es_config = ElasticSearchConfig(
             connector_alias=es_conn_part1,
             hostname=provider_def['host'],
@@ -57,7 +57,8 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
 
     async def setup(self):
         await Collection.init()
-        await System.init()
+        await SystemGeoJson.init()
+        await SystemSML.init()
         await Deployment.init()
         await Procedure.init()
         await SamplingFeature.init()
@@ -221,7 +222,7 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
         return await self.search(query, parameters)
 
     async def query_systems(self, parameters: SystemsParams) -> CSAGetResponse:
-        query = System.search()
+        query = AsyncSearch(index="systems", using=es_conn_part1)
 
         query = parse_datetime_params(query, parameters)
         query = parse_csa_params(query, parameters)
@@ -235,7 +236,6 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
         if parameters.parent is not None:
             query = query.filter("terms", **{"parent": parameters.parent})
         else:
-            pass
             # When requested as a collection
             if not parameters.id:
                 query = query.exclude("exists", field="parent")
@@ -292,45 +292,68 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
 
         return await self.search(query, parameters)
 
-    async def create(self, type: EntityType, item: Dict) -> CSACrudResponse:
+    async def create(self, type: EntityType, encoding: MimeType, item: Dict) -> CSACrudResponse:
 
-        async def duplicate_identifier(item: Dict, entity: AsyncDocument) -> None:
+        async def duplicate_identifier(_: MimeType, item: Dict, entity: AsyncDocument) -> None:
             if "id" in item:
                 if await entity.exists(id=entity.id):
                     raise ProviderInvalidQueryError(user_msg=f"entity with id {entity.id} already exists!")
+            if "uniqueId" in item:
 
-        pre_hook: List[Callable[[Dict, AsyncDocument], Awaitable[None]]] = [duplicate_identifier]
-        post_hook: List[Callable[[Dict, AsyncDocument], Awaitable[None]]] = []
+                query = Deployment().search()
+                query = query.filter("match", uniqueId=item.get("uniqueId"))
+                found = await query.source().execute()
+                test = await self._exists(Deployment.search().filter("term", uniqueId=item.get("uniqueId")))
+
+                if await self._exists(Deployment.search().filter("term", uniqueId=item.get("uniqueId"))):
+                    raise ProviderInvalidQueryError(user_msg=f"entity with uniqueId {item.get('uniqueId')} already exists!")
+
+        pre_hook: List[Callable[[MimeType, Dict, AsyncDocument], Awaitable[None]]] = [duplicate_identifier]
+        post_hook: List[Callable[[MimeType, Dict, AsyncDocument], Awaitable[None]]] = []
 
         # Special Handling for some fields
         match type:
             case EntityType.SYSTEMS:
                 # parse date_range fields to es-compatible format
-                async def check_parent(_: Dict, entity: AsyncDocument) -> None:
-                    self._format_date_range("validTime", entity)
+                async def check_parent(mime: MimeType, _: Dict, entity: AsyncDocument) -> None:
                     parent_id = getattr(entity, "parent", None)
-                    if parent_id and not await System().exists(id=parent_id):
+                    # TODO: check alias
+                    if parent_id and not await AsyncSearch(index="systems", using=es_conn_part1).filter(id=parent_id).source(False).count() > 0:
                         # check that parent exists,
                         raise ProviderInvalidQueryError(user_msg=f"cannot find parent system with id: {parent_id}")
+
                     return None
 
+                if encoding == MimeType.F_SMLJSON.value:
+                    entity = SystemSML(**item)
+                    self._format_date_range("validTime", entity)
+                else:
+                    entity = SystemGeoJson(**item)
+                    self._format_date_range("validTime", entity["properties"])
+
                 pre_hook.append(check_parent)
-                entity = System(**item)
             case EntityType.DEPLOYMENTS:
                 # parse deployedSystems and possibly link if it is local system identified by urn
-                async def link_system(_: Dict, entity: AsyncDocument) -> None:
+                async def link_system(mime: MimeType, _: Dict, entity: AsyncDocument) -> None:
                     entity.system_ids = []
-                    for system in getattr(entity, "deployedSystems", []):
-                        href: str = system["system"]["href"]
-                        if href.startswith("urn"):
-                            query = System().search()
+                    if mime == MimeType.F_SMLJSON.value:
+                        systems = [system["system"] for system in getattr(entity, "deployedSystems", [])]
+                    else:
+                        systems = [syslink for syslink in getattr(getattr(entity, "properties", {}), "deployedSystems@link", [])]
+                    for system in systems:
+                        href = system["href"]
+                        if not href.startswith("http://") and not href.startswith("https://"):
+                            query = AsyncSearch(index="systems", using=es_conn_part1)
                             query = query.filter("term", uniqueId=href)
                             found = await query.source(includes=["_id"]).execute()
                             if len(found.hits) != 1:
                                 raise ProviderInvalidQueryError(
                                     user_msg=f"cannot find local system with urn: {href}")
                             else:
-                                entity.system_ids.append(found.hits.hits[0]._id)
+                                f = found.hits.hits[0]
+                                entity.system_ids.append(f._id)
+                                system["href"] = f"{self.base_url}/systems/{f._id}"
+                                await entity.save()
 
                 post_hook.append(link_system)
                 entity = Deployment(**item)
@@ -350,11 +373,11 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
 
         try:
             for hook in pre_hook:
-                await hook(item, entity)
+                await hook(encoding, item, entity)
             entity.meta.id = identifier
             await entity.save()
             for hook in post_hook:
-                await hook(item, entity)
+                await hook(encoding, item, entity)
             return identifier
         except Exception as e:
             raise ProviderInvalidQueryError(user_msg=str(e))
@@ -391,47 +414,38 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
                             raise ProviderInvalidQueryError(user_msg=error_msg)
 
                         # check sampling features
-                        if await self._exists(
-                                SamplingFeature.search().filter("term", system=identifier)):
+                        if await self._exists(SamplingFeature.search().filter("term", system=identifier)):
                             raise ProviderInvalidQueryError(user_msg=error_msg)
 
                         entity = await System.get(identifier)
-                        # if self._provider_part2:
-
+                        # TODO: check datastream + control-stream
                     else:
-                        # blocked-by: https://github.com/opengeospatial/ogcapi-connected-systems/issues/61
                         # /req/create-replace-delete/system-delete-cascade
-                        # async with asyncio.TaskGroup() as tg:
-                        #     # recursively delete subsystems with all their associated entities
-                        #     subsystems = (AsyncSearch(using=self._es)
-                        #                   .index(self.systems_index_name)
-                        #                   .filter("term", parent=identifier)
-                        #                   .source(False)
-                        #                   .scan())
-                        #     #async for subsystem in subsystems:
-                        #     #    tg.create_task(self.delete("system", subsystem.meta.id, True))
-                        #     print((AsyncSearch(using=self._es)
-                        #      .index(self.deployments_index_name)
-                        #      .filter("term", system=identifier)
-                        #      .source(False)).to_dict())
-                        #     deployments = (AsyncSearch(using=self._es)
-                        #                    .index(self.deployments_index_name)
-                        #                    .filter("term", system=identifier)
-                        #                    .source(False)
-                        #                    .scan())
-                        #     async for d in deployments:
-                        #         print("deleting deployment?")
-                        #         tg.create_task(self.delete("deployment", d.meta.id, True))
-                        #
-                        #     samplingfeatures = (AsyncSearch(using=self._es)
-                        #                         .index(self.samplingfeatures_index_name)
-                        #                         .filter("term", system=identifier)
-                        #                         .source(False)
-                        #                         .scan())
-                        #     async for s in samplingfeatures:
-                        #         tg.create_task(self.delete("samplingFeature", s.meta.id, True))
-                        #
-                        # # await self._delete(self.systems_index_name, identifier)
+                        async with asyncio.TaskGroup() as tg:
+                            # recursively delete subsystems with all their associated entities
+                            subsystems = (System.search()
+                                          .filter("term", parent=identifier)
+                                          .source(False)
+                                          .scan())
+                            async for subsystem in subsystems:
+                                tg.create_task(subsystem.delete())
+
+                            samplingfeatures = (SamplingFeature.search()
+                                                .filter("term", system=identifier)
+                                                .source(False)
+                                                .scan())
+                            async for s in samplingfeatures:
+                                tg.create_task(s.delete())
+
+                            deployments = (Deployment.search()
+                                           .filter("term", system=identifier)
+                                           .source(False)
+                                           .scan())
+                            async for d in deployments:
+                                # remove link to system from deployment
+                                print(d)
+
+                        # await self._delete(self.systems_index_name, identifier)
                         return ProviderGenericError("cascade=true is not implemented yet!")
                     entity = await System.get(id=identifier)
                 case EntityType.DEPLOYMENTS:

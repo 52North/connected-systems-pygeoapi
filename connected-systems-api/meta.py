@@ -313,45 +313,45 @@ class CSMeta:
 
         content['endpoints'].append({
             'title': f'Systems',
-            'href': f'{url}/systems?f={ALLOWED_MIMES.F_SMLJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_SMLJSON.value,
+            'href': f'{url}/systems?f={MimeType.F_SMLJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_SMLJSON.value,
         })
         content['endpoints'].append({
             'title': f'Systems',
-            'href': f'{url}/systems?f={ALLOWED_MIMES.F_GEOJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_GEOJSON.value,
+            'href': f'{url}/systems?f={MimeType.F_GEOJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_GEOJSON.value,
         })
         content['endpoints'].append({
             'title': f'Procedures',
-            'href': f'{url}/procedures?f={ALLOWED_MIMES.F_GEOJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_GEOJSON.value,
+            'href': f'{url}/procedures?f={MimeType.F_GEOJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_GEOJSON.value,
         })
         content['endpoints'].append({
             'title': f'Procedures',
-            'href': f'{url}/procedures?f={ALLOWED_MIMES.F_SMLJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_SMLJSON.value,
+            'href': f'{url}/procedures?f={MimeType.F_SMLJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_SMLJSON.value,
         })
 
         content['endpoints'].append({
             'title': f'Deployments',
-            'href': f'{url}/deployments?f={ALLOWED_MIMES.F_GEOJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_GEOJSON.value,
+            'href': f'{url}/deployments?f={MimeType.F_GEOJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_GEOJSON.value,
         })
         content['endpoints'].append({
             'title': f'Deployments',
-            'href': f'{url}/deployments?f={ALLOWED_MIMES.F_SMLJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_SMLJSON.value,
+            'href': f'{url}/deployments?f={MimeType.F_SMLJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_SMLJSON.value,
         })
 
         content['endpoints'].append({
             'title': f'SamplingFeatures',
-            'href': f'{url}/samplingFeatures?f={ALLOWED_MIMES.F_GEOJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_GEOJSON.value,
+            'href': f'{url}/samplingFeatures?f={MimeType.F_GEOJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_GEOJSON.value,
         })
         content['endpoints'].append({
             'title': f'Properties',
-            'href': f'{url}/properties?f={ALLOWED_MIMES.F_SMLJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_SMLJSON.value,
+            'href': f'{url}/properties?f={MimeType.F_SMLJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_SMLJSON.value,
         })
         content['endpoints'].append({
             'title': f'Datastreams',
@@ -360,13 +360,13 @@ class CSMeta:
         })
         content['endpoints'].append({
             'title': f'Observations',
-            'href': f'{url}/observations?f={ALLOWED_MIMES.F_OMJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_OMJSON.value,
+            'href': f'{url}/observations?f={MimeType.F_OMJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_OMJSON.value,
         })
         content['endpoints'].append({
             'title': f'Observations',
-            'href': f'{url}/observations?f={ALLOWED_MIMES.F_SMLJSON.value.replace("+", "%2B")}',
-            'type': ALLOWED_MIMES.F_SWEJSON.value,
+            'href': f'{url}/observations?f={MimeType.F_SMLJSON.value.replace("+", "%2B")}',
+            'type': MimeType.F_SWEJSON.value,
         })
 
         if request.format == F_HTML:  # render

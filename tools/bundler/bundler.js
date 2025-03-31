@@ -128,10 +128,8 @@ function parse_directory(name) {
                 })
             }
             if ('properties' in suite){
-                console.log("cleaning: " + suite["$id"])
                 cleaned = remove_readonly_required(suite)
             } else {
-                console.log("skipping: " + suite["$id"])
                 cleaned = suite
             }
 
@@ -190,9 +188,12 @@ parse_directory('api/part1/openapi/schemas/geojson')
 parse_directory('api/part2/openapi/schemas/common')
 parse_directory('api/part2/openapi/schemas/json')
 
-await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/system.json', "system.schema"))
-await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/deployment.json', "deployment.schema"))
-await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/procedure.json', "procedure.schema"))
+await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/system.json', "system.sml.schema"))
+await (get_bundle(baseUrl + 'api/part1/openapi/schemas/geojson/system.json', "system.geojson.schema"))
+await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/deployment.json', "deployment.sml.schema"))
+await (get_bundle(baseUrl + 'api/part1/openapi/schemas/geojson/deployment.json', "deployment.geojson.schema"))
+await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/procedure.json', "procedure.sml.schema"))
+await (get_bundle(baseUrl + 'api/part1/openapi/schemas/geojson/procedure.json', "procedure.geojson.schema"))
 await (get_bundle(baseUrl + 'api/part1/openapi/schemas/geojson/samplingFeature.json', "samplingFeature.schema"))
 await (get_bundle(baseUrl + 'api/part1/openapi/schemas/sensorml/property.json', "property.schema"))
 await (get_bundle(baseUrl + 'api/part2/openapi/schemas/json/dataStream.json', "datastream.schema"))

@@ -14,20 +14,25 @@
 # limitations under the License.
 # =================================================================
 import dataclasses
+import logging
 import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime as DateTime
 from enum import Enum, auto
 from typing import List, Optional, Dict, Tuple, TypeAlias
 
-from elasticsearch_dsl import AsyncDocument, Keyword, GeoShape, Date, DateRange, InnerDoc, Object, GeoPoint, Text, Field
+from elasticsearch_dsl import AsyncDocument, Keyword
 from pygeoapi.provider.base import ProviderInvalidQueryError
 
+from provider import es_conn_part1
 from util import MimeType
 
 TimeInterval: TypeAlias = Tuple[Optional[DateTime], Optional[DateTime]]
 CSAGetResponse: TypeAlias = Tuple[List[Dict], List[Dict]] | None
 CSACrudResponse: TypeAlias = str | List[str]
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(level='INFO')
 
 
 class EntityType(Enum):
@@ -41,21 +46,6 @@ class EntityType(Enum):
     OBSERVATIONS = auto()
 
 
-class Alias(Field):
-    """Alias field.
-    https://www.elastic.co/guide/en/elasticsearch/reference/master/alias.html
-    """
-
-    name = "alias"
-    _coerce = True
-
-    def to_dict(self):
-        """Return as dict."""
-        d = super(Alias, self).to_dict()
-        d["type"] = "alias"
-        return d
-
-
 @dataclass
 class CSAParams:
     _parameters = ["f", "id", "q", "limit", "offset"]
@@ -67,7 +57,7 @@ class CSAParams:
     offset: int = 0  # non-standard
 
     @property
-    def format(self):
+    def format(self) -> str:
         return self.f
 
     @format.setter
@@ -181,125 +171,11 @@ class ObservationsParams(FoiObservedpropertyParam, ResulttimePhenomenontimeParam
     datastream: Optional[str] = None
 
 
-es_conn_part1 = "part1"
-es_conn_part2 = "part2"
-
-
-class DatastreamSchema(InnerDoc):
-    obsFormat: str
-
-
-class Datastream(AsyncDocument):
-    id = Keyword()
-    system = Keyword()
-    schema = DatastreamSchema()
-
-    class Index:
-        name = "datastreams"
-        using = es_conn_part2
-
-
 class Collection(AsyncDocument):
     id = Keyword()
 
     class Index:
         name = "collections"
-        using = es_conn_part1
-
-
-class CharacteristicsProp(InnerDoc):
-    value = Keyword()
-
-
-class Characteristics(InnerDoc):
-    characteristics = CharacteristicsProp()
-
-
-class SystemSML(AsyncDocument):
-    type: str = Keyword()
-    id: str = Keyword()
-    description = Text()
-    uniqueId = Keyword()
-    label = Text()
-    lang = Text()
-    keywords = Text()
-    position = GeoShape()
-    geometry = Alias(path="position")
-    parent = Keyword()
-    procedure = Keyword()
-    poi = Keyword()
-    observedProperty = Keyword()
-    controlledProperty = Keyword()
-    characteristics = Characteristics()
-
-    validTime_parsed = DateRange()  # Internal field
-
-    class Index:
-        name = "systems_sml"
-        using = es_conn_part1
-        aliases = {
-            "systems": {}
-        }
-
-
-class SystemGeoJsonProperties(InnerDoc):
-    featureType = Keyword()
-    uid = Keyword()
-    name = Text()
-    description = Text()
-    assetType = Keyword()
-    validTime = Date()
-
-
-class SystemGeoJson(AsyncDocument):
-    type = Keyword()
-    id = Keyword()
-    geometry = GeoShape()
-    bbox = GeoPoint()
-    links = Object()
-    properties = SystemGeoJsonProperties()
-    validTime_parsed = DateRange()  # Internal field
-
-    class Index:
-        name = "systems_geojson"
-        using = es_conn_part1
-        aliases = {
-            "systems": {}
-        }
-
-
-class Deployment(AsyncDocument):
-    id: str = Keyword()
-    uniqueId = Keyword()
-    system_ids = Keyword()  # Internal field
-
-    class Index:
-        name = "deployments"
-        using = es_conn_part1
-
-
-class Procedure(AsyncDocument):
-    id: str = Keyword()
-
-    class Index:
-        name = "procedures"
-        using = es_conn_part1
-
-
-class SamplingFeature(AsyncDocument):
-    id: str = Keyword()
-    system_ids = Keyword()  # Internal field
-
-    class Index:
-        name = "sampling_features"
-        using = es_conn_part1
-
-
-class Property(AsyncDocument):
-    id: str = Keyword()
-
-    class Index:
-        name = "properties"
         using = es_conn_part1
 
 
@@ -333,7 +209,7 @@ class ConnectedSystemsProvider:
 
         raise NotImplementedError()
 
-    async def update(self, type: EntityType, identifier: str, item: Dict):
+    async def update(self, type: EntityType, encoding: MimeType, identifier: str, item: Dict):
         """
         Updates an existing item
 
@@ -346,7 +222,7 @@ class ConnectedSystemsProvider:
 
         raise NotImplementedError()
 
-    async def replace(self, type: EntityType, identifier: str, item: Dict):
+    async def replace(self, type: EntityType, encoding: MimeType, identifier: str, item: Dict):
         """
         Replaces an existing item
 
@@ -578,3 +454,23 @@ def parse_query_parameters(out_parameters: CSAParams, input_parameters: Dict, ur
         return out_parameters
     except Exception as ex:
         raise ProviderInvalidQueryError(user_msg=str(ex.args))
+
+
+def _format_date_range(key: str, item: Dict) -> Dict | None:
+    if hasattr(item, key):
+        time = getattr(item, key)
+        now = DateTime.now()
+        if time[0] == "now":
+            start = now
+        else:
+            start = time[0]
+        if time[1] == "now":
+            end = now
+        else:
+            end = time[1]
+
+        return {
+            "gte": start,
+            "lte": end
+        }
+    return None

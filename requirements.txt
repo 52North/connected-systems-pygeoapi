@@ -18,4 +18,9 @@ quart
 quart-cors
 quart-auth
 
+aiohttp
+elasticsearch
+elasticsearch-dsl
+asyncpg
+
 orjson

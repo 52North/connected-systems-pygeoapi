@@ -70,7 +70,6 @@ dynamic-resources:
       name: ElasticSearchConnectedSystems
       host: localhost
       port: 9200
-      dbname: csa
       user: elastic
       password: password
       verify_certs: False   # True if ES certificates are to be validated. Default 'true'
@@ -81,12 +80,13 @@ dynamic-resources:
     title: "timescale-csa-adapter"
     description: "Adapter to TimescaleDB CSA-Part2 Backend"
     keywords: [ ]
+    strict_validation: False
     provider:
       type: timescale-csa-adapter
       name: TimescaleDBConnectedSystems
       timescale:
         host: localhost
-        port: 5432
+        port: 5433
         dbname: csa
         user: timescaledb
         password: password

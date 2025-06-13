@@ -24,7 +24,7 @@ services:
       - connected-systems-api
 
   connected-systems-api:
-    image: 52north/connected-systems-pygeoapi:v0.4-test
+    image: 52north/connected-systems-pygeoapi:v0.5-test
     build:
       context: ../../../
     environment:

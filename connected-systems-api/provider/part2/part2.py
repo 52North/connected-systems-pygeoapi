@@ -1,5 +1,4 @@
 import json
-import logging
 import uuid
 from http import HTTPStatus
 from pprint import pformat
@@ -12,9 +11,13 @@ from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundErr
 
 from .formats.om_json_scalar import OMJsonSchemaParser
 from .util import TimescaleDbConfig, ObservationQuery, Observation
+from .. import es_conn_part2
+from ..datastream import Datastream
 from ..definitions import *
+from ..deployment import Deployment
 from ..elasticsearch import ElasticsearchConnector, ElasticSearchConfig, parse_csa_params, \
     parse_temporal_filters
+from ..system import System
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel('INFO')
@@ -138,20 +141,47 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
         :returns: identifier of created item
         """
         if type == EntityType.DATASTREAMS:
-            # check if linked system exists
-            if not await System().exists(id=item["system"]):
-                raise ProviderItemNotFoundError(f"no system with id {item['system']} found!")
-
-            # create in elasticsearch
+            # check if duplicate identifier
             if "id" not in item:
                 # We may have to generate id as it is not always required
                 identifier = str(uuid.uuid4())
                 item["id"] = identifier
             else:
-                identifier = item["id"]
+                if await Datastream().exists(id=item["id"]):
+                    raise ProviderItemNotFoundError(user_msg=f"entity with id {item['id']} already exists!")
+                else:
+                    identifier = item["id"]
+
+            # check if linked system exists
+            if not await System().exists(id=item["system"]):
+                raise ProviderItemNotFoundError(f"no system with id {item['system']} found!")
+            else:
+                item["system@link"] = {
+                    "href": f"{self.base_url}/systems/{item['system']}"
+                }
+
+            # check if linked deployment exists
+            deployment = item["deployment@link"]
+            if deployment:
+                href = deployment["href"]
+                if not href.startswith("http://") and not href.startswith("https://"):
+                    # Check that locally referenced Deployment exists
+                    query = Deployment().search().filter("term", uid=href)
+                    found = await query.source(includes=["_id"]).execute()
+                    if found:
+                        item["deployment@link"] = {
+                            "href": f"{self.base_url}/deployments/{found.hits.hits[0]._id}",
+                            "urn": href,
+                            "title": href
+                        }
+                    else:
+                        raise ProviderItemNotFoundError(f"no deplyoment with urn {href} found!")
+
+            # create in elasticsearch
 
             try:
-                ds = Datastream(**item)
+
+                ds = Datastream(raw=item)
                 ds.meta.id = identifier
 
                 await ds.save(refresh=True)
@@ -196,6 +226,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                     new = Datastream(**item)
                     new.meta.id = old.meta.id
                     await new.save()
+                    return None
                 except elasticsearch.NotFoundError as e:
                     raise ProviderItemNotFoundError(user_msg=f"cannot find {type} with id: {identifier}! {e}")
 
@@ -204,6 +235,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
 
             case EntityType.OBSERVATIONS:
                 raise ProviderGenericError(user_msg=f"replace/update of observations not supported yet!")
+        return None
 
     async def update(self, type: EntityType, identifier: str, item: Dict):
         # /req/update/datastream
@@ -215,6 +247,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                 try:
                     entity = await Datastream().get(id=identifier)
                     await entity.update(**item)
+                    return None
                 except elasticsearch.NotFoundError as e:
                     raise ProviderItemNotFoundError(user_msg=f"cannot find {type} with id: {identifier}! {e}")
 
@@ -223,6 +256,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
 
             case EntityType.OBSERVATIONS:
                 raise ProviderGenericError(user_msg=f"replace/update of observations not supported yet!")
+        return None
 
     async def _replace_schema(self, identifier: str, item: Dict):
         # reject if there are associated observations already
@@ -268,11 +302,13 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                         raise e
                     try:
                         await Datastream().delete(id=identifier)
+                        return None
                     except elasticsearch.NotFoundError:
                         raise ProviderItemNotFoundError(f"No datastream with id {identifier} found!")
 
             case EntityType.OBSERVATIONS:
                 return await self._delete_observation(identifier)
+        return None
 
     async def query_datastreams(self, parameters: DatastreamsParams) -> CSAGetResponse:
         """

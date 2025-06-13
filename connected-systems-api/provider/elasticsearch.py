@@ -1,5 +1,4 @@
 import json
-import logging
 from dataclasses import field
 from pprint import pformat
 from typing import Union
@@ -18,12 +17,12 @@ LOGGER.setLevel('INFO')
 def parse_datetime_params(query: AsyncSearch, parameters: DatetimeParam) -> AsyncSearch:
     # Parse dateTime filter
     if parameters.datetime_start() and parameters.datetime_end():
-        query = query.filter("range", validTime_parsed={"gte": parameters.datetime_start().isoformat(),
-                                                        "lte": parameters.datetime_end().isoformat()})
+        query = query.filter("range", _validTime={"gte": parameters.datetime_start().isoformat(),
+                                                  "lte": parameters.datetime_end().isoformat()})
     if parameters.datetime_start():
-        query = query.filter("range", validTime_parsed={"gte": parameters.datetime_start().isoformat()})
+        query = query.filter("range", _validTime={"gte": parameters.datetime_start().isoformat()})
     if parameters.datetime_end():
-        query = query.filter("range", validTime_parsed={"lte": parameters.datetime_end().isoformat()})
+        query = query.filter("range", _validTime={"lte": parameters.datetime_end().isoformat()})
     return query
 
 
@@ -43,30 +42,30 @@ def parse_spatial_params(query: AsyncSearch,
     if parameters.bbox is not None:
         br = f"POINT ({parameters.bbox['y1']} {parameters.bbox['x2']})"
         tl = f"POINT ({parameters.bbox['x1']} {parameters.bbox['y2']})"
-        query = query.filter("geo_bounding_box", position={"top_left": tl, "bottom_right": br})
+        query = query.filter("geo_bounding_box", _geometry={"top_left": tl, "bottom_right": br})
     if parameters.geom is not None:
-        query = query.filter("geo_shape", position={"relation": "intersects", "shape": parameters.geom})
+        query = query.filter("geo_shape", _geometry={"relation": "intersects", "shape": parameters.geom})
     return query
 
 
 def parse_temporal_filters(query: AsyncSearch, parameters: ObservationsParams | DatastreamsParams) -> AsyncSearch:
     # Parse resultTime filter
     if parameters.resulttime_start() and parameters.resulttime_end():
-        query = query.filter("range", validTime_parsed={"gte": parameters.resulttime_start().isoformat(),
-                                                        "lte": parameters.resulttime_end().isoformat()})
+        query = query.filter("range", _validTime={"gte": parameters.resulttime_start().isoformat(),
+                                                  "lte": parameters.resulttime_end().isoformat()})
     if parameters.resulttime_start():
-        query = query.filter("range", validTime_parsed={"gte": parameters.resulttime_start().isoformat()})
+        query = query.filter("range", _validTime={"gte": parameters.resulttime_start().isoformat()})
     if parameters.resulttime_end():
-        query = query.filter("range", validTime_parsed={"lte": parameters.resulttime_end().isoformat()})
+        query = query.filter("range", _validTime={"lte": parameters.resulttime_end().isoformat()})
 
     # Parse phenomenonTime filter
     if parameters.phenomenontime_start() and parameters.phenomenontime_end():
-        query = query.filter("range", validTime_parsed={"gte": parameters.phenomenontime_start().isoformat(),
-                                                        "lte": parameters.phenomenontime_end().isoformat()})
+        query = query.filter("range", _validTime={"gte": parameters.phenomenontime_start().isoformat(),
+                                                  "lte": parameters.phenomenontime_end().isoformat()})
     if parameters.phenomenontime_start():
-        query = query.filter("range", validTime_parsed={"gte": parameters.phenomenontime_start().isoformat()})
+        query = query.filter("range", _validTime={"gte": parameters.phenomenontime_start().isoformat()})
     if parameters.phenomenontime_end():
-        query = query.filter("range", validTime_parsed={"lte": parameters.phenomenontime_end().isoformat()})
+        query = query.filter("range", _validTime={"lte": parameters.phenomenontime_end().isoformat()})
 
     return query
 
@@ -76,11 +75,10 @@ class ElasticSearchConfig:
     hostname: str
     port: int
     user: str
-    dbname: str
     verify_certs: bool
     ca_certs: Optional[str]
+    connector_alias: str
     password: str = field(repr=False)
-    connector_alias: str = field(repr=False)
     password_censored: str = "***********"
 
 
@@ -92,7 +90,7 @@ class ElasticsearchConnector:
                 {pformat(config)}
             """)
 
-        LOGGER.debug(f'Connecting to Elasticsearch at: https://{config.hostname}:{config.port}/{config.dbname}')
+        LOGGER.debug(f'Connecting to Elasticsearch at: https://{config.hostname}:{config.port}')
         try:
             connections.create_connection(
                 alias=config.connector_alias,
@@ -113,25 +111,31 @@ class ElasticsearchConnector:
             raise ProviderConnectionError(msg)
 
     async def _exists(self, query: AsyncSearch) -> bool:
-        LOGGER.debug(json.dumps(query.to_dict(), indent=True, default=str))
+        LOGGER.error(json.dumps(query.to_dict(), indent=True, default=str))
+        LOGGER.error(await query.count())
         return (await query.count()) > 0
 
     async def search(self,
                      query: AsyncSearch,
-                     parameters: CSAParams,
-                     excludes=None) -> CSAGetResponse:
+                     parameters: CSAParams) -> CSAGetResponse:
         # Select appropriate strategy here: For collections >10k elements search_after must be used
-        if excludes is None:
-            excludes = []
-        LOGGER.debug(json.dumps(query.to_dict(), indent=True, default=str))
+        LOGGER.error(json.dumps(query.to_dict(), indent=True, default=str))
 
-        found = (await query.source(excludes=excludes)[parameters.offset:parameters.offset + parameters.limit]
-                 .execute()).hits
+        match parameters.format:
+            case MimeType.F_SMLJSON.value:
+                f = "sml"
+            case MimeType.F_GEOJSON.value:
+                f = "geojson"
+            case MimeType.F_JSON.value:
+                f = "json"
+            case _:
+                raise Exception(f"unrecognized Format {parameters.format}")
+
+        found = (await query.source(f)[parameters.offset:parameters.offset + parameters.limit].execute()).hits
 
         count = found.total.value
         if count > 0:
             links = []
-
             if count >= parameters.limit + parameters.offset:
                 links.append({
                     "title": "next",
@@ -139,7 +143,13 @@ class ElasticsearchConnector:
                     "href": parameters.nextlink()
                 })
 
-            return [h._source.to_dict() for h in found.hits], links
+            LOGGER.error("Add alternative encodings as links here!")
+
+            try:
+                return [x._source.to_dict() for x in found.hits], links
+            except Exception as e:
+                LOGGER.error(e)
+                return [], []
         else:
 
             # check if this query returns 404 or 200 with empty body in case of no return

@@ -1,9 +1,8 @@
 from quart import request, Blueprint
 
-from pygeoapi.flask_app import api_, CONFIG, OPENAPI
-from util import *
-from provider.definitions import *
 from api import csapi_
+from provider.definitions import *
+from util import *
 
 csa_readwrite = Blueprint('csa_readwrite', __name__)
 csa_read = Blueprint('csa_read', __name__)
@@ -23,7 +22,7 @@ async def csa_catalog_root():
 @csa_read.route('/systems', methods=['GET'])
 @csa_read.route('/systems/<path:path>', methods=['GET'])
 @csa_readwrite.route('/systems', methods=['GET', 'POST'])
-@csa_readwrite.route('/systems/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/systems/<path:path>', methods=['GET', 'PUT', 'DELETE'])
 async def systems_path(path=None):
     request.collection = "systems"
     return await _default_handler(path, EntityType.SYSTEMS)
@@ -32,7 +31,7 @@ async def systems_path(path=None):
 @csa_read.route('/procedures', methods=['GET'])
 @csa_read.route('/procedures/<path:path>', methods=['GET'])
 @csa_readwrite.route('/procedures', methods=['GET', 'POST'])
-@csa_readwrite.route('/procedures/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/procedures/<path:path>', methods=['GET', 'PUT', 'DELETE'])
 async def procedures_path(path=None):
     request.collection = "procedures"
     return await _default_handler(path, EntityType.PROCEDURES)
@@ -72,15 +71,16 @@ async def systems_subpath(path=None):
 @csa_read.route('/deployments', methods=['GET'])
 @csa_read.route('/deployments/<path:path>', methods=['GET'])
 @csa_readwrite.route('/deployments', methods=['GET', 'POST'])
-@csa_readwrite.route('/deployments/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/deployments/<path:path>', methods=['GET', 'PUT', 'DELETE'])
 async def deployments_path(path=None):
     request.collection = "deployments"
     return await _default_handler(path, EntityType.DEPLOYMENTS)
 
+
 @csa_read.route('/samplingFeatures', methods=['GET'])
 @csa_read.route('/samplingFeatures/<path:path>', methods=['GET'])
-@csa_readwrite.route('/samplingFeatures', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
-@csa_readwrite.route('/samplingFeatures/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/samplingFeatures', methods=['GET', 'PUT', 'DELETE'])
+@csa_readwrite.route('/samplingFeatures/<path:path>', methods=['GET', 'PUT', 'DELETE'])
 async def properties_path(path=None):
     request.collection = "samplingFeatures"
     return await _default_handler(path, EntityType.SAMPLING_FEATURES)
@@ -88,8 +88,8 @@ async def properties_path(path=None):
 
 @csa_read.route('/properties', methods=['GET'])
 @csa_read.route('/properties/<path:path>', methods=['GET'])
-@csa_readwrite.route('/properties', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
-@csa_readwrite.route('/properties/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/properties', methods=['GET', 'PUT', 'DELETE'])
+@csa_readwrite.route('/properties/<path:path>', methods=['GET', 'PUT', 'DELETE'])
 async def properties_subpath(path=None):
     request.collection = "properties"
     return await _default_handler(path, EntityType.PROPERTIES)
@@ -97,8 +97,8 @@ async def properties_subpath(path=None):
 
 @csa_read.route('/datastreams', methods=['GET'])
 @csa_read.route('/datastreams/<path:path>', methods=['GET'])
-@csa_readwrite.route('/datastreams', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
-@csa_readwrite.route('/datastreams/<path:path>', methods=['GET', 'PATCH', 'PUT', 'DELETE'])
+@csa_readwrite.route('/datastreams', methods=['GET', 'PUT', 'DELETE'])
+@csa_readwrite.route('/datastreams/<path:path>', methods=['GET', 'PUT', 'DELETE'])
 async def datastreams_path(path=None):
     request.collection = "datastreams"
     return await _default_handler(path, EntityType.DATASTREAMS)

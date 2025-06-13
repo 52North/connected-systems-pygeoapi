@@ -97,7 +97,8 @@ class CSAPI(CSMeta):
         API Object implementing OGC API Connected Systems
     """
     validator = SchemaValidator()
-    strict_validation = True
+    strict_validation1 = True
+    strict_validation2 = True
 
     def __init__(self, config: Dict, openapi: Dict):
         config_prefix = os.getenv("CONFIG_PREFIX", "CSA_")
@@ -135,7 +136,7 @@ class CSAPI(CSMeta):
                 self.provider_part1 = load_plugin('provider', provider_definition)
 
                 if api_part1.get("strict_validation", None) is not None:
-                    self.strict_validation = bool(api_part1["strict_validation"])
+                    self.strict_validation1 = bool(api_part1["strict_validation"])
 
                 if self.config.get('resources') is None:
                     self.config['resources'] = {}
@@ -148,6 +149,9 @@ class CSAPI(CSMeta):
                 provider_definition = api_part2['provider']
                 provider_definition["base_url"] = self.base_url
                 self.provider_part2 = load_plugin('provider', provider_definition)
+
+                if api_part2.get("strict_validation", None) is not None:
+                    self.strict_validation1 = bool(api_part2["strict_validation"])
 
                 if self.config.get('resources') is None:
                     self.config['resources'] = {}
@@ -337,16 +341,16 @@ class CSAPI(CSMeta):
 
     @parse_request
     async def put(self, request: AsyncAPIRequest, collection: EntityType, path: Path = None):
-        return await self._upsert(request, HTTPMethod.PUT, collection, path, self.strict_validation)
+        return await self._upsert(request, HTTPMethod.PUT, collection, path)
 
     @parse_request
     async def post(self, request: AsyncAPIRequest, collection: EntityType, path: Path = None):
-        return await self._upsert(request, HTTPMethod.POST, collection, path, self.strict_validation)
+        return await self._upsert(request, HTTPMethod.POST, collection, path)
 
-    @parse_request
-    async def patch(self, request: AsyncAPIRequest, collection: EntityType, path: Path = None):
-        LOGGER.warn("TODO: add validation for properties")
-        return await self._upsert(request, HTTPMethod.PATCH, collection, path, False)
+    # @parse_request
+    # async def patch(self, request: AsyncAPIRequest, collection: EntityType, path: Path = None):
+    #    LOGGER.warn("TODO: add validation for properties")
+    #    return await self._upsert(request, HTTPMethod.PATCH, collection, path, False)
 
     @parse_request
     async def delete(self,
@@ -383,17 +387,19 @@ class CSAPI(CSMeta):
                       request: AsyncAPIRequest,
                       method: HTTPMethod,
                       collection: EntityType,
-                      path: Path = None,
-                      shall_validate: bool = True
+                      path: Path = None
                       ) -> APIResponse:
 
         # multiplex provider implementations (part 1 or part 2)
+        strict_validation = True
         if (collection == EntityType.OBSERVATIONS
                 or collection == EntityType.DATASTREAMS
                 or collection == EntityType.DATASTREAMS_SCHEMA):
             provider = self.provider_part2
+            strict_validation = self.strict_validation2
         else:
             provider = self.provider_part1
+            strict_validation = self.strict_validation1
 
         headers = request.get_response_headers(**self.api_headers)
         try:
@@ -409,10 +415,11 @@ class CSAPI(CSMeta):
         # must be turned off when PATCHing
         # may be turned off for increased performance
         encoding = request.headers.get("Content-Type")
-        if shall_validate:
+        if strict_validation:
             try:
                 self.validator.validate(collection, encoding, entity)
             except jsonschema.exceptions.ValidationError as ex:
+                print(ex)
                 return self.get_exception(
                     HTTPStatus.BAD_REQUEST,
                     headers,
@@ -440,9 +447,9 @@ class CSAPI(CSMeta):
                 case HTTPMethod.POST:
                     response = provider.create(collection, encoding, entity)
                 case HTTPMethod.PUT:
-                    response = provider.replace(collection, path[1], entity)
+                    response = provider.replace(collection, encoding, path[1], entity)
                 case HTTPMethod.PATCH:
-                    response = provider.update(collection, path[1], entity)
+                    response = provider.update(collection, encoding, path[1], entity)
                 case _:
                     raise Exception(f"unrecognized HTTMethod {method}")
 
@@ -539,6 +546,9 @@ if not os.getenv("PYGEOAPI_CONFIG"):
     os.environ["PYGEOAPI_CONFIG"] = os.path.join(os.path.dirname(__file__), "default-config.yml")
 if not os.getenv("PYGEOAPI_OPENAPI"):
     os.environ["PYGEOAPI_OPENAPI"] = os.path.join(os.path.dirname(__file__), "default-openapi.yml")
+
+LOGGER.critical(f"Loading pygeoapi_config from {os.environ["PYGEOAPI_CONFIG"]}")
+LOGGER.critical(f"Loading openapi_config from {os.environ["PYGEOAPI_OPENAPI"]}")
 
 CONFIG = get_config()
 OPENAPI = load_openapi_document()

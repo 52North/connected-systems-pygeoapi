@@ -146,7 +146,7 @@ class ElasticsearchConnector:
             LOGGER.error("Add alternative encodings as links here!")
 
             try:
-                return [x._source.to_dict() for x in found.hits], links
+                return [getattr(x._source, f).to_dict() for x in found.hits], links
             except Exception as e:
                 LOGGER.error(e)
                 return [], []

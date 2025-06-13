@@ -43,7 +43,6 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
             connector_alias=es_conn_part1,
             hostname=provider_def['host'],
             port=int(provider_def['port']),
-            dbname=provider_def['dbname'],
             user=provider_def['user'],
             password=provider_def['password'],
             verify_certs=provider_def.get('verify_certs', True),

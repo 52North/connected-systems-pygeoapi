@@ -70,7 +70,6 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
             port=provider_def["elastic"]["port"],
             user=provider_def["elastic"]["user"],
             password=provider_def["elastic"]["password"],
-            dbname=provider_def["elastic"]["dbname"],
             verify_certs=provider_def["elastic"].get("verify_certs", True),
             ca_certs=provider_def["elastic"].get("ca_certs", None),
         )

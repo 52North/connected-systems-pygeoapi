@@ -1,9 +1,9 @@
 import logging
 from typing import Dict
 
-from elasticsearch_dsl import AsyncDocument, Keyword, GeoShape, InnerDoc, Object, Text, Nested, AttrDict
+from elasticsearch_dsl import Keyword, GeoShape, InnerDoc, Object, Text, Nested
 
-from provider.definitions import es_conn_part1
+from provider.definitions import es_conn_part1, CSDocument
 from util import MimeType
 
 LOGGER = logging.getLogger(__name__)
@@ -28,9 +28,7 @@ class ProcedureGeoJson(InnerDoc):
     properties = Object()
 
 
-class Procedure(AsyncDocument):
-    uid = Keyword()
-
+class Procedure(CSDocument):
     sml = Nested(ProcedureSML)
     geojson = Nested(ProcedureGeoJson)
 
@@ -39,23 +37,16 @@ class Procedure(AsyncDocument):
         using = es_conn_part1
 
     async def save(self, **kwargs):
-        mime: MimeType | None = getattr(self, "mime", None)
-        raw: AttrDict | None = getattr(self, "raw", None)
-        delattr(self, "mime")
-        delattr(self, "raw")
+        if "id" not in self.raw:
+            self.raw["id"] = self.id
 
-        if "id" not in raw:
-            raw["id"] = self.id
-
-        if mime == MimeType.F_GEOJSON.value:
-            LOGGER.warn("TODO: transcode Procedure GeoJSON -> SML")
-            self.geojson = ProcedureGeoJson(**raw)
+        if self.mime == MimeType.F_GEOJSON.value:
+            LOGGER.warning("TODO: transcode Procedure GeoJSON -> SML")
+            self.geojson = ProcedureGeoJson(**self.raw)
             self.sml = {}
-            self.uid = raw["properties"]["uid"]
-        elif mime == MimeType.F_SMLJSON.value:
-            self.sml = ProcedureSML(**raw)
-            self.geojson = procedure_to_geojson(raw.to_dict())
-            self.uid = raw["uniqueId"]
+        elif self.mime == MimeType.F_SMLJSON.value:
+            self.sml = ProcedureSML(**self.raw)
+            self.geojson = procedure_to_geojson(self.raw.to_dict())
 
         await super().save(**kwargs)
 

@@ -19,12 +19,12 @@ import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime as DateTime
 from enum import Enum, auto
-from typing import List, Optional, Dict, Tuple, TypeAlias
+from typing import List, Optional, Dict, Tuple, TypeAlias, Text, ClassVar
 
-from elasticsearch_dsl import AsyncDocument, Keyword
-from pygeoapi.provider.base import ProviderInvalidQueryError
+from elasticsearch_dsl import AsyncDocument, Keyword, AttrDict, DateRange
 
 from provider import es_conn_part1
+from provider.util import _format_date_range
 from util import MimeType
 
 TimeInterval: TypeAlias = Tuple[Optional[DateTime], Optional[DateTime]]
@@ -123,13 +123,13 @@ class FoiObservedpropertyParam(CSAParams):
 
 @dataclass(slots=True)
 class CollectionParams(DatetimeParam, FoiObservedpropertyParam, CSAParams, BBoxParam, GeomParam):
-    _parameters = ["f", "id", "q", "limit", "offset", "foi", "observedProperty", "bbox", "geom"]
+    _parameters = ["f", "id", "q", "datetime", "limit", "offset", "foi", "observedProperty", "bbox", "geom"]
     pass
 
 
 @dataclass(slots=True)
 class SystemsParams(DatetimeParam, FoiObservedpropertyParam, BBoxParam, GeomParam):
-    _parameters = ["f", "id", "q", "limit", "offset", "bbox", "foi", "observedProperty", "parent", "procedure",
+    _parameters = ["f", "id", "q", "datetime", "limit", "offset", "bbox", "foi", "observedProperty", "parent", "procedure",
                    "controlledProperty", "geom"]
     parent: Optional[List[str]] = None
     procedure: Optional[List[str]] = None
@@ -138,19 +138,19 @@ class SystemsParams(DatetimeParam, FoiObservedpropertyParam, BBoxParam, GeomPara
 
 @dataclass(slots=True)
 class DeploymentsParams(DatetimeParam, FoiObservedpropertyParam, BBoxParam, GeomParam):
-    _parameters = ["f", "id", "q", "limit", "offset", "bbox", "foi", "observedProperty", "system", "geom"]
+    _parameters = ["f", "id", "q", "datetime", "limit", "offset", "bbox", "foi", "observedProperty", "system", "geom"]
     system: Optional[List[str]] = None
 
 
 @dataclass(slots=True)
 class ProceduresParams(DatetimeParam, FoiObservedpropertyParam):
-    _parameters = ["f", "id", "q", "limit", "offset", "foi", "observedProperty", "controlledProperty"]
+    _parameters = ["f", "id", "q", "datetime", "limit", "offset", "foi", "observedProperty", "controlledProperty"]
     controlledProperty: Optional[List[str]] = None
 
 
 @dataclass(slots=True)
 class SamplingFeaturesParams(DatetimeParam, FoiObservedpropertyParam, BBoxParam, GeomParam):
-    _parameters = ["f", "id", "q", "limit", "offset", "bbox", "foi", "observedProperty", "controlledProperty", "system",
+    _parameters = ["f", "id", "q", "datetime", "limit", "offset", "bbox", "foi", "observedProperty", "controlledProperty", "system",
                    "geom"]
     controlledProperty: Optional[List[str]] = None
     system: Optional[List[str]] = None
@@ -335,142 +335,27 @@ class ConnectedSystemsPart1Provider(ConnectedSystemsProvider):
         raise NotImplementedError()
 
 
-def parse_query_parameters(out_parameters: CSAParams, input_parameters: Dict, url: str):
-    """
-    Parse parameter dict into usable/typed parameters
-    """
+class CSDocument(AsyncDocument):
+    uid = Keyword()
+    name: str
+    description: Optional[Text]
+    validTime: Optional[DateRange] = DateRange()
 
-    def _parse_list(identifier):
-        setattr(out_parameters,
-                identifier,
-                [elem for elem in input_parameters.get(identifier).split(",")])
+    mime: ClassVar[MimeType]
+    raw: ClassVar[AttrDict]
 
-    def _verbatim(key):
-        setattr(out_parameters, key, input_parameters.get(key))
+    async def save(self, **kwargs):
+        if self.mime == MimeType.F_GEOJSON.value:
+            self.validTime = _format_date_range("validTime", self.raw["properties"])
+            self.uid = self.raw["properties"]["uid"]
+            self.name = self.raw["properties"]["name"]
+            self.description = self.raw["properties"]["description"]
+        elif self.mime == MimeType.F_SMLJSON.value:
+            self.validTime = _format_date_range("validTime", self.raw)
+            self.uid = self.raw.uniqueId
+            self.name = getattr(self.raw, "label", None)
+            self.description = getattr(self.raw, "description", None)
 
-    def _parse_int(key):
-        setattr(out_parameters, key, int(input_parameters.get(key)))
-
-    def _parse_time(key):
-        val = input_parameters.get(key)
-        if "/" in val:
-            _parse_time_interval(key)
-        else:
-            # TODO: check if more edge cases/predefined variables exist
-            if val == "now":
-                date = DateTime.now()
-            else:
-                date = DateTime.fromisoformat(val)
-            setattr(out_parameters, key, (date, date))
-
-    def _parse_bbox(key):
-        split = input_parameters.get("bbox").split(',')
-        if len(split) == 4:
-            box = {
-                "type": "2d",
-                "x1": split[0],  # Lower left corner, coordinate axis 1
-                "x2": split[1],  # Lower left corner, coordinate axis 2
-                "y1": split[2],  # Upper right corner, coordinate axis 1
-                "y2": split[3]  # Upper right corner, coordinate axis 2
-            }
-        elif len(split) == 6:
-            box = {
-                "type": "3d",
-                "x1": split[0],  # Lower left corner, coordinate axis 1
-                "x2": split[1],  # Lower left corner, coordinate axis 2
-                "xalt": split[2],  # Minimum value, coordinate axis 3 (optional)
-                "y1": split[3],  # Upper right corner, coordinate axis 1
-                "y2": split[4],  # Upper right corner, coordinate axis 2
-                "yalt": split[5]  # Maximum value, coordinate axis 3 (optional)
-            }
-        else:
-            raise ProviderInvalidQueryError("invalid bbox")
-        setattr(out_parameters, "bbox", box)
-
-    def _parse_time_interval(key):
-        raw = input_parameters.get(key)
-        setattr(out_parameters, key, raw)
-        # TODO: Support 'latest' qualifier
-        now = DateTime.now()
-        start, end = None, None
-        if "/" in raw:
-            # time interval
-            split = raw.split("/")
-            startts = split[0]
-            endts = split[1]
-            if startts == "now":
-                start = now
-            elif startts == "..":
-                start = None
-            else:
-                start = DateTime.fromisoformat(startts)
-            if endts == "now":
-                end = now
-            elif endts == "..":
-                end = None
-            else:
-                end = DateTime.fromisoformat(endts)
-        else:
-            if raw == "now":
-                start = now
-                end = now
-            else:
-                ts = DateTime.fromisoformat(raw)
-                start = ts
-                end = ts
-        setattr(out_parameters, "_" + key, (start, end))
-
-    parser = {
-        "id": _parse_list,
-        "system": _parse_list,
-        "parent": _parse_list,
-        "q": _verbatim,
-        "observedProperty": _parse_list,
-        "procedure": _parse_list,
-        "controlledProperty": _parse_list,
-        "foi": _parse_list,
-        "format": _verbatim,
-        "f": _verbatim,
-        "limit": _parse_int,
-        "offset": _parse_int,
-        "bbox": _parse_bbox,
-        "datetime": _parse_time,
-        "geom": _verbatim,
-        "datastream": _verbatim,
-        "phenomenonTime": _parse_time_interval,
-        "resultTime": _parse_time_interval,
-    }
-
-    out_parameters._url = url
-    #  TODO: There must be a way to make this more efficient/straightforward..
-    # Iterate possible parameters
-    try:
-        for p in out_parameters._parameters:
-            # Check if parameter is supplied as input
-            if p in input_parameters:
-                # Parse value with appropriate mapping function
-                parser[p](p)
-
-        return out_parameters
-    except Exception as ex:
-        raise ProviderInvalidQueryError(user_msg=str(ex.args))
-
-
-def _format_date_range(key: str, item: Dict) -> Dict | None:
-    if hasattr(item, key):
-        time = getattr(item, key)
-        now = DateTime.now()
-        if time[0] == "now":
-            start = now
-        else:
-            start = time[0]
-        if time[1] == "now":
-            end = now
-        else:
-            end = time[1]
-
-        return {
-            "gte": start,
-            "lte": end
-        }
-    return None
+        delattr(self, "mime")
+        delattr(self, "raw")
+        await super().save(**kwargs)

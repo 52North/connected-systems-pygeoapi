@@ -1,4 +1,4 @@
-from typing import Dict, ClassVar
+from typing import ClassVar
 
 from elasticsearch_dsl import AsyncDocument, Keyword, InnerDoc, Object, AttrDict
 

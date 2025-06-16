@@ -19,7 +19,7 @@ from typing import Callable, Awaitable
 
 import elasticsearch
 from elasticsearch_dsl import async_connections
-from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundError
+from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundError, ProviderInvalidQueryError
 
 from ..definitions import *
 from ..deployment import Deployment

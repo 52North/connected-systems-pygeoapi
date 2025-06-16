@@ -1,9 +1,9 @@
 import logging
-from typing import Dict, ClassVar
+from typing import Dict
 
-from elasticsearch_dsl import AsyncDocument, Keyword, GeoShape, Date, InnerDoc, Object, GeoPoint, Text, DateRange, Nested, AttrDict
+from elasticsearch_dsl import Keyword, GeoShape, Date, InnerDoc, Object, GeoPoint, Text, Nested
 
-from provider.definitions import _format_date_range, es_conn_part1
+from provider.definitions import es_conn_part1, CSDocument
 from util import MimeType
 
 LOGGER = logging.getLogger(__name__)
@@ -41,45 +41,30 @@ class DeploymentGeoJson(InnerDoc):
     properties = DeploymentGeoJsonProperties()
 
 
-class Deployment(AsyncDocument):
-    uid = Keyword()
+class Deployment(CSDocument):
     linked_system_ids = Keyword()
-    validTime = DateRange()
     geometry = GeoShape()
     sml = Nested(DeploymentSML)
     geojson = Nested(DeploymentGeoJson)
-
-    raw: ClassVar[object]
-    mime: ClassVar[str]
 
     class Index:
         name = "deployments"
         using = es_conn_part1
 
     async def save(self, **kwargs):
-        mime: MimeType | None = getattr(self, "mime", None)
-        raw: AttrDict | None = getattr(self, "raw", None)
-        delattr(self, "mime")
-        delattr(self, "raw")
+        if "id" not in self.raw:
+            self.raw["id"] = self.id
 
-        if "id" not in raw:
-            raw["id"] = self.id
-
-        self.validTime = _format_date_range("validTime", raw)
-        if mime == MimeType.F_GEOJSON.value:
+        if self.mime == MimeType.F_GEOJSON.value:
             LOGGER.error("TODO: transcoding for Deployment")
-            self.geojson = DeploymentGeoJson(**raw)
+            self.geojson = DeploymentGeoJson(**self.raw)
             self.sml = {}
-            self.validTime = _format_date_range("validTime", raw["properties"])
-            self.geometry = getattr(raw, "geometry", None)
-            self.uid = raw["properties"]["uid"]
-        elif mime == MimeType.F_SMLJSON.value:
+            self.geometry = getattr(self.raw, "geometry", None)
+        elif self.mime == MimeType.F_SMLJSON.value:
             LOGGER.error("TODO: transcoding for Deployment")
-            self.sml = DeploymentSML(**raw)
-            self.geojson = deployment_to_geojson(raw.to_dict())
-            self.validTime = _format_date_range("validTime", raw)
-            self.geometry = getattr(raw, "location", None)
-            self.uid = raw["uniqueId"]
+            self.sml = DeploymentSML(**self.raw)
+            self.geojson = deployment_to_geojson(self.raw.to_dict())
+            self.geometry = getattr(self.raw, "location", None)
 
         return await super().save(**kwargs)
 

@@ -1,9 +1,9 @@
 from typing import Dict
 
-from elasticsearch_dsl import AsyncDocument, Keyword, GeoShape, Date, DateRange, InnerDoc, Object, GeoPoint, Text, Nested, AttrDict
+from elasticsearch_dsl import Keyword, GeoShape, Date, InnerDoc, Object, GeoPoint, Text, Nested
 from pygeoapi.provider.base import ProviderInvalidQueryError
 
-from provider.definitions import _format_date_range, es_conn_part1
+from provider.definitions import es_conn_part1, CSDocument
 from util import MimeType
 
 
@@ -50,14 +50,12 @@ class SystemGeoJson(InnerDoc):
     properties = SystemGeoJsonProperties()
 
 
-class System(AsyncDocument):
+class System(CSDocument):
     """
     Meta-Keywords used for filtering. Must be supported by all encodings
     """
     # _type: str = Keyword()
     parent = Keyword()
-    uid = Keyword()
-    validTime = DateRange()
     geometry = GeoShape()
 
     sml = Nested(SystemSML)
@@ -68,26 +66,17 @@ class System(AsyncDocument):
         using = es_conn_part1
 
     async def save(self, **kwargs):
-        mime: MimeType | None = getattr(self, "mime", None)
-        raw: AttrDict | None = getattr(self, "raw", None)
-        delattr(self, "mime")
-        delattr(self, "raw")
+        if "id" not in self.raw:
+            self.raw["id"] = self.id
 
-        if "id" not in raw:
-            raw["id"] = self.id
-
-        if mime == MimeType.F_GEOJSON.value:
-            self.geojson = SystemGeoJson(**raw)
-            self.sml = system_to_sml(raw)
-            self.validTime = _format_date_range("validTime", raw["properties"])
-            self.geometry = raw["geometry"]
-            self.uid = raw["properties"]["uid"]
-        elif mime == MimeType.F_SMLJSON.value:
-            self.sml = SystemSML(**raw)
-            self.geojson = system_to_geojson(raw.to_dict())
-            self.validTime = _format_date_range("validTime", raw)
-            self.geometry = getattr(raw, "position", None)
-            self.uid = raw.uniqueId
+        if self.mime == MimeType.F_GEOJSON.value:
+            self.geojson = SystemGeoJson(**self.raw)
+            self.sml = system_to_sml(self.raw)
+            self.geometry = self.raw["geometry"]
+        elif self.mime == MimeType.F_SMLJSON.value:
+            self.sml = SystemSML(**self.raw)
+            self.geojson = system_to_geojson(self.raw.to_dict())
+            self.geometry = getattr(self.raw, "position", None)
 
         await super().save(**kwargs)
 

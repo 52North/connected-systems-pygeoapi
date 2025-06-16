@@ -1,11 +1,11 @@
 from http import HTTPStatus
 
+from pygeoapi.flask_app import api_, CONFIG
 from pygeoapi.util import filter_dict_by_key_value
 from quart import request, Blueprint
 
-from pygeoapi.flask_app import api_, CONFIG, OPENAPI
-from util import *
 from api import csapi_
+from util import *
 
 collections = Blueprint('collections', __name__)
 
@@ -44,7 +44,7 @@ async def all_collections(collection_id: str = None):
         response = api_.describe_collections(CompatibilityRequest(body, request.headers, request.args))
 
         # Add CSAPI-Collections to response
-        response = await csapi_.get_collections(request, response, format)
+        response = await csapi_.get_collections(request, response, "application/json")
 
     return await to_response(response)
 

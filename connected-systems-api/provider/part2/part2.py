@@ -7,7 +7,7 @@ import asyncpg
 import elasticsearch
 from asyncpg import Connection
 from elasticsearch_dsl import async_connections
-from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundError
+from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundError, ProviderInvalidQueryError
 
 from .formats.om_json_scalar import OMJsonSchemaParser
 from .util import TimescaleDbConfig, ObservationQuery, Observation

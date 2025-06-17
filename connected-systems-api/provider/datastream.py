@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Text, Optional
 
 from elasticsearch_dsl import AsyncDocument, Keyword, InnerDoc, Object, AttrDict
 
@@ -13,6 +13,8 @@ class Datastream(AsyncDocument):
     uid = Keyword()
     system = Keyword()
     json = Object()
+    name: str
+    description: Optional[Text]
 
     raw: ClassVar[object]
 
@@ -27,9 +29,11 @@ class Datastream(AsyncDocument):
         if "id" not in raw:
             raw["id"] = self.id
 
+        self.name = getattr(raw, "name", None)
+        self.description = getattr(raw, "description", None)
+        self.system = getattr(raw, "system", None)
         self.json = raw
 
-        self.system = raw["system"]
         delattr(raw, "system")
 
         return await super().save(**kwargs)

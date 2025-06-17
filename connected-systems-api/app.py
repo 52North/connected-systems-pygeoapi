@@ -38,31 +38,34 @@ APP.config['QUART_CORS_EXPOSE_HEADERS'] = os.environ.get("CSA_CORS_EXPOSE_HEADER
 APP.config['QUART_CORS_MAX_AGE'] = os.environ.get("CSA_CORS_MAX_AGE")
 APP = cors(APP)
 
-APP.config["QUART_AUTH_BASIC_USERNAME"] = os.environ.get("QUART_AUTH_BASIC_USERNAME") or secrets.token_hex()
-APP.config["QUART_AUTH_BASIC_PASSWORD"] = os.environ.get("QUART_AUTH_BASIC_PASSWORD") or secrets.token_hex()
 APP.config["QUART_AUTH_BASIC_READ"] = os.environ.get("QUART_AUTH_BASIC_READ") or False
+APP.config["QUART_AUTH_BASIC_READ_USERNAME"] = os.environ.get("QUART_AUTH_BASIC_READ_USERNAME") or secrets.token_hex(32)
+APP.config["QUART_AUTH_BASIC_READ_PASSWORD"] = os.environ.get("QUART_AUTH_BASIC_READ_PASSWORD") or secrets.token_hex(32)
+
 APP.config["QUART_AUTH_BASIC_READWRITE"] = os.environ.get("QUART_AUTH_BASIC_READWRITE") or True
+APP.config["QUART_AUTH_BASIC_READWRITE_USERNAME"] = os.environ.get("QUART_AUTH_BASIC_READWRITE_USERNAME") or secrets.token_hex(32)
+APP.config["QUART_AUTH_BASIC_READWRITE_PASSWORD"] = os.environ.get("QUART_AUTH_BASIC_READWRITE_PASSWORD") or secrets.token_hex(32)
 
 APP.url_map.strict_slashes = False
 APP.config['JSONIFY_PRETTYPRINT_REGULAR'] = CONFIG['server'].get('pretty_print', False)
 
 if APP.config["QUART_AUTH_BASIC_READ"]:
     @csa_read.before_request
-    @basic_auth_required()
+    @basic_auth_required(username_key="QUART_AUTH_BASIC_READ_USERNAME", password_key="QUART_AUTH_BASIC_READ_PASSWORD")
     async def is_auth():
         # Auth is handled by @basic_auth_required wrapper already
         return None
 
 
     @collections.before_request
-    @basic_auth_required()
+    @basic_auth_required(username_key="QUART_AUTH_BASIC_READ_USERNAME", password_key="QUART_AUTH_BASIC_READ_PASSWORD")
     async def is_auth():
         # Auth is handled by @basic_auth_required wrapper already
         return None
 
 if APP.config["QUART_AUTH_BASIC_READWRITE"]:
     @csa_readwrite.before_request
-    @basic_auth_required()
+    @basic_auth_required(username_key="QUART_AUTH_BASIC_READWRITE_USERNAME", password_key="QUART_AUTH_BASIC_READWRITE_PASSWORD")
     async def is_auth():
         # Auth is handled by @basic_auth_required wrapper already
         return None

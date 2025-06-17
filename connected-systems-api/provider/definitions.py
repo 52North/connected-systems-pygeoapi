@@ -24,7 +24,7 @@ from typing import List, Optional, Dict, Tuple, TypeAlias, Text, ClassVar
 from elasticsearch_dsl import AsyncDocument, Keyword, AttrDict, DateRange
 
 from provider import es_conn_part1
-from provider.util import _format_date_range
+from .util import _format_date_range
 from util import MimeType
 
 TimeInterval: TypeAlias = Tuple[Optional[DateTime], Optional[DateTime]]

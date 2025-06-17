@@ -33,7 +33,7 @@ def parse_csa_params(query: AsyncSearch, parameters: CSAParams) -> AsyncSearch:
     # Parse id filter
     if parameters.id is not None:
         query = query.filter("terms", _id=parameters.id)
-    if parameters.q is not None and parameters.q is not "":
+    if parameters.q is not None and parameters.q != "":
         query = query.query("combined_fields", query=parameters.q, fields=["name", "description"])
     return query
 

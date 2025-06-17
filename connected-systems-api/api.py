@@ -249,17 +249,17 @@ class CSAPI(CSMeta):
                 handler = self.provider_part1.query_systems
                 params = SystemsParams()
                 allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]
-                default_mimetype = MimeType.F_GEOJSON
+                default_mimetype = MimeType.F_SMLJSON
             case EntityType.DEPLOYMENTS:
                 handler = self.provider_part1.query_deployments
                 params = DeploymentsParams()
                 allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]
-                default_mimetype = MimeType.F_GEOJSON
+                default_mimetype = MimeType.F_SMLJSON
             case EntityType.PROCEDURES:
                 handler = self.provider_part1.query_procedures
                 params = ProceduresParams()
                 allowed_mimetypes = [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]
-                default_mimetype = MimeType.F_GEOJSON
+                default_mimetype = MimeType.F_SMLJSON
             case EntityType.SAMPLING_FEATURES:
                 handler = self.provider_part1.query_sampling_features
                 params = SamplingFeaturesParams()
@@ -321,7 +321,7 @@ class CSAPI(CSMeta):
 
         try:
             parameters = parse_query_parameters(params, request.params, self.base_url + "/" + request.path_info)
-            parameters.format = request.format
+            parameters.format = request.format if request.format is not None else default_mimetype.value
             data = await handler(parameters)
 
             return self._format_json_response(request, headers, data, collection)

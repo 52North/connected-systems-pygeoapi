@@ -357,7 +357,9 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
                             else:
                                 f = found.hits.hits[0]
                                 entity.linked_system_ids.append(f._id)
+                                entity.linked_system_ids.append(href)
                                 system["href"] = f"{self.base_url}/systems/{f._id}"
+                                system["urn"] = href
 
                 pre_hook.append(link_system)
                 entity = Deployment(raw=item, mime=encoding)

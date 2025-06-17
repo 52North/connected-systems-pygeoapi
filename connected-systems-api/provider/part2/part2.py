@@ -108,7 +108,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                                                                 uuid UUID DEFAULT gen_random_uuid(),
                                                                 resulttime TIMESTAMPTZ NOT NULL,
                                                                 phenomenontime TIMESTAMPTZ,
-                                                                datastream_id UUID NOT NULL,
+                                                                datastream_id text NOT NULL,
                                                                 result BYTEA NOT NULL,
                                                                 sampling_feature_id text,
                                                                 procedure_link text,

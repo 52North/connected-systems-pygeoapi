@@ -1,6 +1,7 @@
 from datetime import datetime as DateTime
 from typing import Dict
 
+from elasticsearch_dsl import AttrDict
 from pygeoapi.provider.base import ProviderInvalidQueryError
 
 
@@ -123,3 +124,23 @@ def parse_query_parameters(out_parameters: "CSAParams", input_parameters: Dict, 
         return out_parameters
     except Exception as ex:
         raise ProviderInvalidQueryError(user_msg=str(ex.args))
+
+
+def _format_date_range(key: str, item: AttrDict) -> Dict | None:
+    if hasattr(item, key):
+        time = getattr(item, key)
+        now = DateTime.now()
+        if time[0] == "now":
+            start = now
+        else:
+            start = time[0]
+        if time[1] == "now":
+            end = now
+        else:
+            end = time[1]
+
+        return {
+            "gte": start,
+            "lte": end
+        }
+    return None

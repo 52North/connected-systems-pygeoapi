@@ -14,19 +14,19 @@ networks:
 
 
 services:
-  proxy:
-    image: nginx:alpine
-    ports:
-      - 80:80
-    volumes:
-      - "./nginx-proxy.conf:/etc/nginx/conf.d/default.conf"
-    depends_on:
-      - connected-systems-api
+#  proxy:
+#    image: nginx:alpine
+#    ports:
+#      - 80:80
+#    volumes:
+#      - "./nginx-proxy.conf:/etc/nginx/conf.d/default.conf"
+#    depends_on:
+#      - connected-systems-api
 
   connected-systems-api:
     image: 52north/connected-systems-pygeoapi:v0.5-test
     build:
-      context: ../../../
+      context: .
     environment:
       PYTHONUNBUFFERED: 1
       CSA_SERVER_BIND_HOST: localhost
@@ -51,16 +51,14 @@ services:
       test: [ "CMD-SHELL", 'sh -c "wget -q -nv --spider http://127.0.0.1:5000/status || exit 1"' ]
       interval: 15s
       timeout: 30s
-  #    depends_on:
-  #      es01:
-  #        condition: service_healthy
-  #      timescaledb:
-  #        condition: service_healthy
+    depends_on:
+      es01:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
 
   timescaledb:
     image: timescale/timescaledb-ha:pg16
-    ports:
-      - 5433:5432
     environment:
       TIMESCALEDB_TELEMETRY: off
       POSTGRES_DB: csa
@@ -70,6 +68,11 @@ services:
       POSTGRES_MULTIPLE_EXTENSIONS: postgis
     volumes:
       - postgresdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # https://www.elastic.co/blog/getting-started-with-the-elastic-stack-and-docker-compose
   # https://github.com/elkninja/elastic-stack-docker-part-one
@@ -138,8 +141,6 @@ services:
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata01:/usr/share/elasticsearch/data
-    ports:
-      - ${ES_PORT}:9200
     environment:
       - node.name=es01
       - cluster.name=${CLUSTER_NAME}
@@ -182,7 +183,6 @@ services:
 #      co.elastic.logs/module: kibana
 #    volumes:
 #      - certs:/usr/share/kibana/config/certs
-#      - kibanadata:/usr/share/kibana/data
 #    ports:
 #      - ${KIBANA_PORT}:5601
 #    environment:
@@ -203,7 +203,7 @@ services:
 #      interval: 10s
 #      timeout: 10s
 #      retries: 120
-
+#
 #  pgadmin:
 #    image: dpage/pgadmin4
 #    environment:

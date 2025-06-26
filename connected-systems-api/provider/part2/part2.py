@@ -168,7 +168,6 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                     LOGGER.error("TODO: Restore datastreams")
                     # Create row for each datastream
                     # find out first/last timestamps of associated observations
-        LOGGER.error("ASDF")
 
     def get_conformance(self) -> List[str]:
         """Returns the list of conformance classes that are implemented by this provider"""

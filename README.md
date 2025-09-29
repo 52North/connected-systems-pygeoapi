@@ -24,17 +24,30 @@ docker build --target=<hybrid|toardb> .
 
 The specific installation instructions depend on the actual backend to be used, as each backend may require additional dependencies.
 
+Start virtual env
+
+```commandline
+python3 -m venv venv
+source venv/bin/activate
+```
+
 Installation of requirements:
 
 ```commandline
 pip install -r requirements.txt
 pip install --no-deps -r requirements_nodeps.txt
+```
 
-[if toardb backend is used]
-pip install -r requirements_toardb_csa.txt
+To start backend services
 
-[if elasticsearch backend is used]
-pip install -r requirements_elasticsearch_csa.txt
+Make sure you have an .env file (Use the provided sample .env.sample)
+
+```commandline
+ cp .env.sample .env
+```
+
+```commandline
+docker compose -f docker-compose-backend-only.yml up -d
 ```
 
 If additional providers are used, e.g. for serving a `STAC` interface in parallel to Connected-Systems, additional
@@ -45,6 +58,19 @@ The application can then be started from the root directory via
 ```commandline
 python3 connected-systems-api/app.py 
 ```
+
+#### Launch with breakpoints (VS Code)
+
+Provided in .vscode a sample launch file.
+
+
+ - Make sure vs code interrupter is using your virtual env
+    - `Ctrl+Shift+P` to open Command Palette
+    - Search for `Python: Select Interpreter`
+    - Select your venv (should be whatever one start with `.venv`)
+ - Open 'connected-systems-api/app.py'
+ - Run and Debug (on sidebar)
+    - Press Green Play button to launch application attached to debugger
 
 ### devcontainer
 

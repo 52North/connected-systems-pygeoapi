@@ -203,7 +203,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                 }
 
             # check if linked deployment exists
-            deployment = item["deployment@link"]
+            deployment = item.get("deployment@link")
             if deployment:
                 href = deployment["href"]
                 if not href.startswith("http://") and not href.startswith("https://"):

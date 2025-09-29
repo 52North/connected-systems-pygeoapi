@@ -321,8 +321,8 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
                 async def link_procedure(mime: MimeType, _: Dict, entity: System) -> None:
                     typeOf = getattr(entity["raw"], "typeOf", None)
                     # TODO: check alias
-                    if typeOf and typeOf["rel"] == "ogc-rel:procedures":
-                        href = typeOf["href"]
+                    if typeOf and getattr(typeOf, "rel", None) == "ogc-rel:procedures":
+                        href = getattr(typeOf, "rel", None)
                         found = await Procedure().search().filter("term", uid=href).source(includes=["_id"]).execute()
                         if len(found.hits) != 1:
                             raise ProviderInvalidQueryError(user_msg=f"cannot find linked procedure with urn: {href}")

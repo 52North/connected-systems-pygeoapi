@@ -1,3 +1,2 @@
-concurrent
 requests
 tqdm

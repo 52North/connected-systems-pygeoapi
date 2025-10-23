@@ -180,7 +180,7 @@ def run():
     post(f"/systems/{system['id']}/datastreams", datastream)
 
     for _ in tqdm(range(num_of_obs_to_insert)):
-        post(f"/datastreams/{datastream['id']}/observations", gen_observation(datastream['id']), "application/om+json")
+        post(f"/datastreams/{datastream['id']}/observations", gen_observation(datastream['id']), "application/json")
         # sleep(100 / 1000)
 
 

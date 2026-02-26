@@ -110,6 +110,9 @@ class ObservationQuery:
             stub = "WHERE "
             stub += " AND ".join(self.clauses)
 
+        # Sort observations by resultTime in descending order (newest first)
+        stub += " ORDER BY resulttime DESC"
+
         if with_paging:
             stub += f" LIMIT {self.limit}"
             if self.offset > 0:

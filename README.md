@@ -68,3 +68,4 @@ The API is accessible at `<host>:5000` and provides a HTML landing page for easy
 The software is licensed under the `Apache 2.0 License`. See [LICENSE.md](LICENSE.md) for details.
 
 ## Contributors
+note: this is just a typo to show that i did the pull request.

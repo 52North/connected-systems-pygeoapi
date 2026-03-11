@@ -26,11 +26,10 @@ dependencies = [
     "requests>=2.32.5",
     "rtree>=1.4.1",
     "setuptools>=80.9.0",
-    "shapely==2.0.6",
     "tqdm>=4.67.1",
     "urllib3>=2.5.0",
     "numpy==2.2.4",
-    "shapely==2.6.0"
+    "shapely>=2.0.6"
 ]
 
 [tool.uv.sources]
@@ -38,7 +37,7 @@ pygeoapi = { git = "https://github.com/52north/pygeoapi.git", rev = "ec1eb38d9a6
 
 
 [tool.uv]
-build-constraint-dependencies = ["numpy==2.2.4", "shapely==2.6.0"]
+build-constraint-dependencies = ["numpy==2.2.4", "shapely>=2.0.6"]
 
 override-dependencies = [
     "numpy; sys_platform == 'never'",

@@ -92,7 +92,7 @@ def system_to_sml(system: Dict) -> SystemSML:
 
 def system_to_geojson(system: Dict) -> SystemGeoJson:
     # Trancoding according to 23-001r0 Section 19.2.x
-    links = system.get(f"links") if not None else []
+    links = system.get("links") or []
     if system.get("attachedTo"):
         links.append(system.get("attachedTo"))
     return SystemGeoJson(**{

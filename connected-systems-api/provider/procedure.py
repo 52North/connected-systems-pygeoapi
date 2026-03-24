@@ -53,7 +53,7 @@ class Procedure(CSDocument):
 
 def procedure_to_geojson(procedure: Dict) -> ProcedureGeoJson:
     # Trancoding according to 23-001r0 Section 19.2.x
-    links = procedure.get(f"links") if not None else []
+    links = procedure.get("links") or []
     return ProcedureGeoJson(**{
         "type": "Feature",
         "id": procedure.get("id"),

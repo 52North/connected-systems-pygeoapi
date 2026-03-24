@@ -152,7 +152,7 @@ class CSAPI(CSMeta):
                 self.provider_part2 = load_plugin('provider', provider_definition)
 
                 if api_part2.get("strict_validation", None) is not None:
-                    self.strict_validation1 = bool(api_part2["strict_validation"])
+                    self.strict_validation2 = bool(api_part2["strict_validation"])
 
                 if self.config.get('resources') is None:
                     self.config['resources'] = {}
@@ -441,7 +441,7 @@ class CSAPI(CSMeta):
             try:
                 self.validator.validate(collection, encoding, entity)
             except jsonschema.exceptions.ValidationError as ex:
-                print(ex)
+                LOGGER.debug(ex)
                 return self.get_exception(
                     HTTPStatus.BAD_REQUEST,
                     headers,

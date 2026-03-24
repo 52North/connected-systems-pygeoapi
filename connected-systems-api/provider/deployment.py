@@ -72,7 +72,7 @@ class Deployment(CSDocument):
 
 def deployment_to_geojson(deployment: Dict) -> DeploymentGeoJson:
     # Trancoding according to 23-001r0 Section 19.2.x
-    links = deployment.get(f"links") if not None else []
+    links = deployment.get("links") or []
     return DeploymentGeoJson(**{
         "type": "Feature",
         "id": deployment.get("id"),

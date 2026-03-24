@@ -95,10 +95,10 @@ class ObservationQuery:
             return self
 
         if time[0] is not None:
-            self.clauses.append(f"{key}>=${len(self.clauses) + 1}")
+            self.clauses.append(f"{key} >= ${len(self.clauses) + 1}")
             self.parameters.append(time[0])
         if time[1] is not None:
-            self.clauses.append(f"{key}<=${len(self.clauses) + 1}")
+            self.clauses.append(f"{key} <= ${len(self.clauses) + 1}")
             self.parameters.append(time[1])
         return self
 
@@ -109,6 +109,8 @@ class ObservationQuery:
             # first clause
             stub = "WHERE "
             stub += " AND ".join(self.clauses)
+
+        stub += " ORDER BY resulttime ASC"
 
         if with_paging:
             stub += f" LIMIT {self.limit}"

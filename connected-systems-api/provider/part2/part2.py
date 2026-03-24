@@ -44,9 +44,9 @@ class Cache:
 
     def remove(self, identifier: str):
         """removes element with given identifier from the list. Does not change the pointer"""
-        for elem in self.__cache:
+        for i, elem in enumerate(self.__cache):
             if elem == identifier:
-                del elem
+                self.__cache[i] = ""
 
 
 class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, ElasticsearchConnector):
@@ -138,9 +138,9 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                                 $$BEGIN
                                    UPDATE datastreams SET
                                    resulttime_start=LEAST(resulttime_start, NEW.resulttime),
-                                   resulttime_end=GREATEST(resulttime_start, NEW.resulttime),
-                                   phenomenontime_start=GREATEST(phenomenontime_start, NEW.phenomenontime),
-                                   phenomenontime_end=GREATEST(phenomenontime_start, NEW.phenomenontime)
+                                   resulttime_end=GREATEST(resulttime_end, NEW.resulttime),
+                                   phenomenontime_start=LEAST(phenomenontime_start, NEW.phenomenontime),
+                                   phenomenontime_end=GREATEST(phenomenontime_end, NEW.phenomenontime)
                                    WHERE id=NEW.datastream_id;
                                    RETURN NULL;
                                 END;$$;
@@ -194,7 +194,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                 item["id"] = identifier
             else:
                 if await Datastream().exists(id=item["id"]):
-                    raise ProviderItemNotFoundError(user_msg=f"entity with id {item['id']} already exists!")
+                    raise ProviderInvalidQueryError(user_msg=f"entity with id {item['id']} already exists!")
                 else:
                     identifier = item["id"]
 

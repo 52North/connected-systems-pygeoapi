@@ -21,5 +21,4 @@ class Collection(AsyncDocument):
 
         self.json = raw
 
-        print(self)
         return await super().save(**kwargs)

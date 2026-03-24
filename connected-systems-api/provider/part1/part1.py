@@ -456,8 +456,10 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
                     if not cascade:
                         # /req/create-replace-delete/system
                         # reject if there are nested resources: subsystems, sampling features, datastreams, control streams
-                        error_msg = f"cannot delete system with nested resources and cascade=false. "
-                        f"ref: /req/create-replace-delete/system"
+                        error_msg = (
+                            "cannot delete system with nested resources and cascade=false. "
+                            "ref: /req/create-replace-delete/system"
+                        )
 
                         # TODO: Should we run all these checks in parallel or is it more efficient to sync + exit early?
                         # check subsystems
@@ -498,10 +500,10 @@ class ConnectedSystemsESProvider(ConnectedSystemsPart1Provider, ElasticsearchCon
                                            .scan())
                             async for d in deployments:
                                 # remove link to system from deployment
-                                print(d)
+                                LOGGER.debug(d)
 
                         # await self._delete(self.systems_index_name, identifier)
-                        return ProviderGenericError("cascade=true is not implemented yet!")
+                        raise ProviderGenericError("cascade=true is not implemented yet!")
                     entity = await System.get(identifier)
                     return await entity.delete()
                 case EntityType.DEPLOYMENTS:

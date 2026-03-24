@@ -54,21 +54,21 @@ def parse_spatial_params(query: AsyncSearch,
 def parse_temporal_filters(query: AsyncSearch, parameters: ObservationsParams | DatastreamsParams) -> AsyncSearch:
     # Parse resultTime filter
     if parameters.resulttime_start() and parameters.resulttime_end():
-        query = query.filter("range", validTime={"gte": parameters.resulttime_start().isoformat(),
-                                                 "lte": parameters.resulttime_end().isoformat()})
-    if parameters.resulttime_start():
-        query = query.filter("range", validTime={"gte": parameters.resulttime_start().isoformat()})
-    if parameters.resulttime_end():
-        query = query.filter("range", validTime={"lte": parameters.resulttime_end().isoformat()})
+        query = query.filter("range", resultTime={"gte": parameters.resulttime_start().isoformat(),
+                                                  "lte": parameters.resulttime_end().isoformat()})
+    elif parameters.resulttime_start():
+        query = query.filter("range", resultTime={"gte": parameters.resulttime_start().isoformat()})
+    elif parameters.resulttime_end():
+        query = query.filter("range", resultTime={"lte": parameters.resulttime_end().isoformat()})
 
     # Parse phenomenonTime filter
     if parameters.phenomenontime_start() and parameters.phenomenontime_end():
-        query = query.filter("range", validTime={"gte": parameters.phenomenontime_start().isoformat(),
-                                                 "lte": parameters.phenomenontime_end().isoformat()})
-    if parameters.phenomenontime_start():
-        query = query.filter("range", validTime={"gte": parameters.phenomenontime_start().isoformat()})
-    if parameters.phenomenontime_end():
-        query = query.filter("range", validTime={"lte": parameters.phenomenontime_end().isoformat()})
+        query = query.filter("range", phenomenonTime={"gte": parameters.phenomenontime_start().isoformat(),
+                                                      "lte": parameters.phenomenontime_end().isoformat()})
+    elif parameters.phenomenontime_start():
+        query = query.filter("range", phenomenonTime={"gte": parameters.phenomenontime_start().isoformat()})
+    elif parameters.phenomenontime_end():
+        query = query.filter("range", phenomenonTime={"lte": parameters.phenomenontime_end().isoformat()})
 
     return query
 
@@ -114,9 +114,10 @@ class ElasticsearchConnector:
             raise ProviderConnectionError(msg)
 
     async def _exists(self, query: AsyncSearch) -> bool:
-        LOGGER.error(json.dumps(query.to_dict(), indent=True, default=str))
-        LOGGER.error(await query.count())
-        return (await query.count()) > 0
+        LOGGER.debug(json.dumps(query.to_dict(), indent=True, default=str))
+        count = await query.count()
+        LOGGER.debug(count)
+        return count > 0
 
     async def search(self,
                      query: AsyncSearch,
@@ -134,7 +135,7 @@ class ElasticsearchConnector:
                     "href": parameters.nextlink()
                 })
 
-            LOGGER.error("Add alternative encodings as links here!")
+            LOGGER.debug("Add alternative encodings as links here!")
 
             try:
                 return [getattr(x._source, parameters.format).to_dict() for x in found.hits], links

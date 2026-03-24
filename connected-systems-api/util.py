@@ -1,5 +1,8 @@
+import logging
 from enum import Enum
 from typing import Self, Union, Tuple, Optional, List, OrderedDict
+
+LOGGER = logging.getLogger(__name__)
 
 from pygeoapi import l10n
 from pygeoapi.api import APIRequest, SYSTEM_LOCALE, FORMAT_TYPES
@@ -130,7 +133,7 @@ class AsyncAPIRequest(APIRequest):
                              force_type: str = None,
                              force_encoding: str = None,
                              **custom_headers) -> dict:
-        print("response headers")
+        LOGGER.debug("response headers")
         return {
             'Content-Type': force_encoding if force_encoding else self.CSAFORMAT_TYPES[self._format] if self._format else default_type,
             # 'X-Powered-By': f'pygeoapi {__version__}',

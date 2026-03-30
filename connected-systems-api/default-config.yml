@@ -25,9 +25,9 @@ logging:
 metadata:
   identification:
     title:
-      en: connected-systems-pygeoapi
+      en: 52North Connected Systems API
     description:
-      en: OGC Connected-Systems API
+      en: Standalone OGC API Connected Systems service built on top of pygeoapi internals
     keywords:
       en:
         - geospatial

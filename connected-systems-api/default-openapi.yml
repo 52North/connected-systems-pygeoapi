@@ -4843,12 +4843,12 @@ info:
     email: you@example.org
     name: Organization Name
     url: https://pygeoapi.io
-  description: pygeoapi provides an API to geospatial data
+  description: Standalone OGC API Connected Systems service built on top of pygeoapi internals
   license:
     name: CC-BY 4.0 license
     url: https://creativecommons.org/licenses/by/4.0/
   termsOfService: https://creativecommons.org/licenses/by/4.0/
-  title: pygeoapi default instance
+  title: 52North Connected Systems API
   version: 0.16.dev0
   x-keywords:
   - geospatial
@@ -5397,10 +5397,10 @@ paths:
       tags:
       - connected-systems-api
 servers:
-- description: pygeoapi provides an API to geospatial data
+- description: Standalone OGC API Connected Systems service built on top of pygeoapi internals
   url: http://localhost:5000
 tags:
-- description: pygeoapi provides an API to geospatial data
+- description: Standalone OGC API Connected Systems service built on top of pygeoapi internals
   externalDocs:
     description: information
     url: https://example.org

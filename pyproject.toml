@@ -1,7 +1,7 @@
 [project]
 name = "connected-systems-pygeoapi"
 version = "0.6.0"
-description = "Implementation of the OGC API Connected Systems based on the pygeoapi project"
+description = "Standalone OGC API Connected Systems service built on top of pygeoapi internals"
 readme = "README.md"
 requires-python = "==3.12.12"
 dependencies = [

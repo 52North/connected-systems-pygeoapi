@@ -1,70 +1,93 @@
 # connected-systems-pygeoapi
 
-Proof of Concept of the OGC Connected Systems API based on pygeoapi
+Prototype implementation of OGC API Connected Systems that currently runs as a standalone Quart service while
+reusing selected pygeoapi internals.
 
-## Installation
+> Current status: this repository does **not** integrate with vanilla pygeoapi as a purely config-driven deployment.
+> It runs a custom Quart application that reuses selected pygeoapi APIs, configuration loading, templating, and plugin
+> infrastructure while implementing Connected Systems behavior in this codebase.
 
-### Docker
+For the detailed architecture and upstream relation, see [docs/pygeoapi-relation.md](docs/pygeoapi-relation.md).
 
-Example Setups for each backend are provided in the respective subfolder in the `./docker/` subdirectory.
+## What this repository is today
 
-Build appropriate docker container (choose either target)
+- A standalone Connected Systems API service with its own application entrypoint in `connected-systems-api/app.py`.
+- A pygeoapi-based integration layer that still reuses upstream request handling, OpenAPI loading, templating helpers,
+  route handlers for selected OGC APIs, and the provider/plugin registry.
+- A prototype that is currently pinned to a specific 52North pygeoapi revision via `pyproject.toml`.
+
+## Integration with pygeoapi
+
+The current integration model is hybrid:
+
+- `connected-systems-api/api.py` registers custom Connected Systems provider plugins in the pygeoapi plugin registry,
+  loads configuration and OpenAPI documents through pygeoapi, and instantiates the local `CSAPI` object plus a
+  pygeoapi `API` object.
+- `connected-systems-api/app.py` starts a custom Quart app and registers local blueprints for Connected Systems,
+  collections, STAC, EDR, coverages, and processes.
+- Several routes adapt Quart requests into `AsyncAPIRequest` objects and delegate directly to upstream pygeoapi route
+  handlers, especially for Processes, STAC, EDR, Coverages, tiles, and parts of Collections.
+- Connected Systems resources themselves are implemented locally and plugged in via `dynamic-resources`.
+
+This means the project should currently be understood as "a standalone service that depends on pygeoapi internals",
+not as "vanilla pygeoapi plus configuration".
+
+## Current direction
+
+The working assumption for contributors should be:
+
+- treat this repository as a standalone Connected Systems service first
+- treat pygeoapi as a pinned platform dependency and adapter layer
+- only pursue convergence back toward vanilla pygeoapi if that becomes an explicit product goal
+
+The detailed rationale and future-path discussion live in [docs/pygeoapi-relation.md](docs/pygeoapi-relation.md).
+
+## Running the service
+
+### Development dependencies
+
+The repository uses `uv` for dependency management.
 
 ```commandline
-docker compose build connected-systems-api
+uv sync
 ```
 
-Note: When building manually make sure to specify the `target` as either `hybrid` or `toardb`.
+### Start supporting services
+
+`docker-compose-dev.yml` starts the development backing services such as Elasticsearch, TimescaleDB, Kibana, and
+pgAdmin. It does not start the application itself by default.
 
 ```commandline
-docker build --target=<hybrid|toardb> .
+docker compose -f docker-compose-dev.yml up -d
 ```
 
-### Local/Development Installation
-
-The specific installation instructions depend on the actual backend to be used, as each backend may require additional dependencies.
-
-Installation of requirements:
+### Start the application
 
 ```commandline
-pip install -r requirements.txt
-pip install --no-deps -r requirements_nodeps.txt
-
-[if toardb backend is used]
-pip install -r requirements_toardb_csa.txt
-
-[if elasticsearch backend is used]
-pip install -r requirements_elasticsearch_csa.txt
+uv run hypercorn -c hypercorn.conf.py connected-systems-api/app:APP
 ```
 
-If additional providers are used, e.g. for serving a `STAC` interface in parallel to Connected-Systems, additional
-dependencies may be necessary depending on the used underlying provider.
+By default the application reads:
 
-The application can then be started from the root directory via
+- `PYGEOAPI_CONFIG` for the pygeoapi-compatible service configuration
+- `PYGEOAPI_OPENAPI` for the OpenAPI document
+- `CSA_*` environment variables for Connected Systems-specific overrides
 
-```commandline
-python3 connected-systems-api/app.py 
-```
+If these are not set, `connected-systems-api/api.py` falls back to the repository's bundled defaults.
 
-### devcontainer
+## Example data
 
-This repository contains [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) configurations.
-Before using them, the `docker/examples/hybrid-csa/.env-sample` or any other working `.env` MUST be provided by copying it to the `.devcontainer/` folder.
+You can insert example data into a running instance by using [tools/simulator/simulator.py](tools/simulator/simulator.py).
+Install the simulator's dependencies from [tools/simulator/requirements.txt](tools/simulator/requirements.txt) in a
+separate environment if needed.
 
-Remember to rebuild the containers, if any other example set-up from `docker/examples` was executed beforehand.
+## Documentation notes
 
-### Example Data
-
-You can insert example data into your running instance (`url_stub`) by using the [simulator](./tools/simulator/simulator.py).
-Ensure to set-up your python environment accordingly and install the [required dependencies](./tools/simulator/requirements.txt) in your simulator env.
-You can limit the amount of observations (`num_of_obs_to_insert`) being inserted in the `simlutor.py`
-
-## Usage
-
-The API is accessible at `<host>:5000` and provides a HTML landing page for easy navigation.
+The current repository name reflects the historical origin of the project. The documentation in
+[docs/pygeoapi-relation.md](docs/pygeoapi-relation.md) explains why that name is now only partially accurate,
+recommends current wording for docs and releases, and captures the longer-term naming strategy if the project remains
+a standalone service.
 
 ## License
 
-The software is licensed under the `Apache 2.0 License`. See [LICENSE.md](LICENSE.md) for details.
-
-## Contributors
+The software is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.

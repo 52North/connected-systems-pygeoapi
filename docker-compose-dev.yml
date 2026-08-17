@@ -15,38 +15,39 @@ networks:
     external: false
 
 services:
-#  connected-systems-api:
-#    image: 52north/connected-systems-pygeoapi:local
-#    build:
-#      context: .
-#    environment:
-#      PYTHONUNBUFFERED: 1
-#      CSA_SERVER_BIND_HOST: localhost
-#      CSA_SERVER_BIND_PORT: 5000
-#      CSA_CORS_ALLOW_ORIGIN: "*"
-#      CSA_QUART_AUTH_BASIC_READ: "false"
-#      CSA_QUART_AUTH_BASIC_READWRITE: "false"
-#      CSA_DYNAMIC-RESOURCES_CSA-PART1_PROVIDER_HOST: es01
-#      CSA_DYNAMIC-RESOURCES_CSA-PART1_PROVIDER_PASSWORD: password
-#      CSA_DYNAMIC-RESOURCES_CSA-PART1_PROVIDER_USER: elastic
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_ELASTIC_HOST: es01
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_ELASTIC_PASSWORD: password
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_ELASTIC_USER: elastic
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_HOST: timescaledb
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_PASSWORD: password
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_USER: timescaledb
-#      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_PORT: 5432
-#    ports:
-#      - 5000:5000
-#    healthcheck:
-#      test: [ "CMD-SHELL", 'sh -c "wget -q -nv --spider http://127.0.0.1:5000/status || exit 1"' ]
-#      interval: 15s
-#      timeout: 30s
-#    depends_on:
-#      es01:
-#        condition: service_healthy
-#      timescaledb:
-#        condition: service_healthy
+  connected-systems-api:
+  #  connected-systems-api:
+  #    image: 52north/connected-systems-pygeoapi:local
+  #    build:
+  #      context: .
+  #    environment:
+  #      PYTHONUNBUFFERED: 1
+  #      CSA_SERVER_BIND_HOST: localhost
+  #      CSA_SERVER_BIND_PORT: 5000
+  #      CSA_CORS_ALLOW_ORIGIN: "*"
+  #      CSA_QUART_AUTH_BASIC_READ: "false"
+  #      CSA_QUART_AUTH_BASIC_READWRITE: "false"
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART1_PROVIDER_HOST: es01
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART1_PROVIDER_PASSWORD: password
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART1_PROVIDER_USER: elastic
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_ELASTIC_HOST: es01
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_ELASTIC_PASSWORD: password
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_ELASTIC_USER: elastic
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_HOST: timescaledb
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_PASSWORD: password
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_USER: timescaledb
+  #      CSA_DYNAMIC-RESOURCES_CSA-PART2_PROVIDER_TIMESCALE_PORT: 5432
+  #    ports:
+  #      - 5000:5000
+  #    healthcheck:
+  #      test: [ "CMD-SHELL", 'sh -c "wget -q -nv --spider http://127.0.0.1:5000/status || exit 1"' ]
+  #      interval: 15s
+  #      timeout: 30s
+  #    depends_on:
+  #      es01:
+  #        condition: service_healthy
+  #      timescaledb:
+  #        condition: service_healthy
 
   timescaledb:
     image: timescale/timescaledb-ha:pg16
@@ -60,7 +61,7 @@ services:
     volumes:
       - postgresdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready" ]
+      test: ["CMD-SHELL", "pg_isready -d csa -U timescaledb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -112,7 +113,7 @@ services:
         echo "All done!";
       '
     healthcheck:
-      test: [ "CMD-SHELL", "[ -f config/certs/es01/es01.crt ]" ]
+      test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
       interval: 1s
       timeout: 5s
       retries: 120
@@ -197,6 +198,6 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.io
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - 5050:80

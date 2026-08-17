@@ -10,7 +10,7 @@ from elasticsearch.dsl import async_connections
 from pygeoapi.provider.base import ProviderGenericError, ProviderItemNotFoundError, ProviderInvalidQueryError
 
 from .formats.om_json_scalar import OMJsonSchemaParser
-from .util import TimescaleDbConfig, ObservationQuery, Observation
+from .util import TimescaleDbConfig, ObservationQuery, Observation, SORT_ORDER, ORDER_BY
 from .. import es_conn_part2
 from ..datastream import Datastream
 from ..definitions import *
@@ -109,7 +109,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                                                                 resulttime TIMESTAMPTZ NOT NULL,
                                                                 phenomenontime TIMESTAMPTZ,
                                                                 datastream_id text NOT NULL,
-                                                                result BYTEA NOT NULL,
+                                                                result JSONB NOT NULL,
                                                                 sampling_feature_id text,
                                                                 procedure_link text,
                                                                 parameters text
@@ -139,7 +139,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
                                    UPDATE datastreams SET
                                    resulttime_start=LEAST(resulttime_start, NEW.resulttime),
                                    resulttime_end=GREATEST(resulttime_start, NEW.resulttime),
-                                   phenomenontime_start=GREATEST(phenomenontime_start, NEW.phenomenontime),
+                                   phenomenontime_start=LEAST(phenomenontime_start, NEW.phenomenontime),
                                    phenomenontime_end=GREATEST(phenomenontime_start, NEW.phenomenontime)
                                    WHERE id=NEW.datastream_id;
                                    RETURN NULL;
@@ -419,6 +419,7 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
     async def _get_observations(self, parameters: ObservationsParams) -> list:
         q = ObservationQuery()
         q.with_limit(parameters.limit)
+        q.with_sort(order=SORT_ORDER.ASCENDING, order_by= ORDER_BY.PHENOMENONTIME) #always sorted by phenomenon time
 
         if parameters.id:
             q.with_id(parameters.id)
@@ -431,10 +432,12 @@ class ConnectedSystemsTimescaleDBProvider(ConnectedSystemsPart2Provider, Elastic
         if parameters.datastream:
             q.with_datastream(parameters.datastream)
 
+
         async with self._pool.acquire() as connection:
             LOGGER.debug("SELECT * FROM observations " + q.to_sql())
             LOGGER.debug(f"{q.parameters}")
-            return await connection.fetch("SELECT * FROM observations " + q.to_sql(), *q.parameters)
+            query = "SELECT * FROM observations " + q.to_sql()
+            return await connection.fetch(query, *q.parameters)
 
     async def _delete_observation(self, identifier: str):
         q = ObservationQuery()

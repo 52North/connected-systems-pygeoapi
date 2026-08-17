@@ -264,49 +264,57 @@ class CSAPI(CSMeta):
         """
 
         allowed_mimetypes = []
-        default_mimetype: MimeType = None
+        default_mimetype: str = None
+        # Concrete encoding that a generic 'json'/'application/json' request falls
+        # back to for feature resources (set per entity below)
+        json_fallback_format: str = None
         match collection:
             case EntityType.SYSTEMS:
                 handler = self.provider_part1.query_systems
                 params = SystemsParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]]
-                default_mimetype = MimeType.F_SMLJSON
+                default_mimetype = F_SMLJSON
+                json_fallback_format = default_mimetype
             case EntityType.DEPLOYMENTS:
                 handler = self.provider_part1.query_deployments
                 params = DeploymentsParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]]
-                default_mimetype = MimeType.F_SMLJSON
+                default_mimetype = F_SMLJSON
+                json_fallback_format = default_mimetype
             case EntityType.PROCEDURES:
                 handler = self.provider_part1.query_procedures
                 params = ProceduresParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_SMLJSON, MimeType.F_GEOJSON]]
-                default_mimetype = MimeType.F_SMLJSON
+                default_mimetype = F_SMLJSON
+                json_fallback_format = default_mimetype
             case EntityType.SAMPLING_FEATURES:
                 handler = self.provider_part1.query_sampling_features
                 params = SamplingFeaturesParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_GEOJSON]]
-                default_mimetype = MimeType.F_GEOJSON
+                default_mimetype = F_GEOJSON
+                json_fallback_format = default_mimetype
             case EntityType.PROPERTIES:
                 handler = self.provider_part1.query_properties
                 params = CSAParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_SMLJSON]]
-                default_mimetype = MimeType.F_SMLJSON
+                default_mimetype = F_SMLJSON
+                json_fallback_format = default_mimetype
             case EntityType.DATASTREAMS:
                 handler = self.provider_part2.query_datastreams
                 params = DatastreamsParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_JSON]]
-                default_mimetype = MimeType.F_JSON
+                default_mimetype = F_JSON
             case EntityType.DATASTREAMS_SCHEMA:
                 handler = self.provider_part2.query_datastreams
                 params = DatastreamsParams()
                 params.schema = True
                 allowed_mimetypes = [m.value for m in [MimeType.F_JSON]]
-                default_mimetype = MimeType.F_JSON
+                default_mimetype = F_JSON
             case EntityType.OBSERVATIONS:
                 handler = self.provider_part2.query_observations
                 params = ObservationsParams()
                 allowed_mimetypes = [m.value for m in [MimeType.F_HTML, MimeType.F_JSON, MimeType.F_OMJSON]]
-                default_mimetype = MimeType.F_JSON
+                default_mimetype = F_JSON
 
         # Check if mime_type is allowed
         if not request.is_valid(allowed_mimetypes):
@@ -317,7 +325,7 @@ class CSAPI(CSMeta):
                 'InvalidMimetype',
                 f"invalid mimetype supplied! expected {allowed_mimetypes} got '{request.format}'")
 
-        headers = request.get_response_headers(**self.api_headers, default_type=default_mimetype.value, force_type=request.format)
+        headers = request.get_response_headers(**self.api_headers, default_type=default_mimetype)
         collection = True
         # Expand parameters with additional information based on path
         if path is not None:
@@ -342,7 +350,17 @@ class CSAPI(CSMeta):
 
         try:
             parameters = parse_query_parameters(params, request.params, self.base_url + "/" + request.path_info)
-            parameters.format = request.format if request.format is not None else default_mimetype.value
+            parameters.format = request.format if request.format is not None else default_mimetype
+
+            # 'json'/'application/json' is not a explicitly defined encoding for CSA Part 1 objects
+            # fallback to preferred concrete encoding and report its real media type so the
+            # Content-Type response header matches the body that is actually returned.
+            use_json_fallback = json_fallback_format and parameters.format in (F_JSON, MimeType.F_JSON.value)
+            if use_json_fallback:
+                parameters.format = json_fallback_format
+                # Override the Content-Type header to match the concrete encoding that is actually returned
+                headers["Content-Type"] = request.get_response_headers(force_type=json_fallback_format)["Content-Type"]
+
             data = await handler(parameters)
 
             return self._format_json_response(request, headers, data, collection)

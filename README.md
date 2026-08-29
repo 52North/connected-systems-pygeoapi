@@ -57,7 +57,7 @@ Remember to rebuild the containers, if any other example set-up from `docker/exa
 
 You can insert example data into your running instance (`url_stub`) by using the [simulator](./tools/simulator/simulator.py).
 Ensure to set-up your python environment accordingly and install the [required dependencies](./tools/simulator/requirements.txt) in your simulator env.
-You can limit the amount of observations (`num_of_obs_to_insert`) being inserted in the `simlutor.py`
+You can limit the amount of observations (`num_of_obs_to_insert`) being inserted in the `simulator.py`
 
 ## Usage
 

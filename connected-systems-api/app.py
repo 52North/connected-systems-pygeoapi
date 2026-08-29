@@ -165,6 +165,6 @@ if __name__ == "__main__":
         APP.config["QUART_AUTH_BASIC_READWRITE_PASSWORD"] = "test"
         print(APP.config)
 
-    """ Initialize peristent database/provider connections """
+    """ Initialize persistent database/provider connections """
     APP.metrics.mode = AppMode.DEV
     APP.run(debug=True, host="localhost", port=5000)

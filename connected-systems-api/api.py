@@ -529,6 +529,14 @@ class CSAPI(CSMeta):
                         (subcollection[1], f"../{subcollection[1]}"),
                         (collection, collection)
                     ]
+            elif collection == "observations" and request.params.get("datastream"):
+                datastream = request.params.get("datastream")
+                data["config"]["datastream"] = datastream
+                data["breadcrumbs"] = [
+                    ("datastreams", "../"),
+                    (datastream, f"../{datastream}"),
+                    (collection, collection)
+                ]
         else:
             collection, id = request.path_info.split("/")
             data = {
